@@ -1,0 +1,5 @@
+services:
+    _defaults:
+        public: false
+
+    Versh23\ManticoreBundle\Command\PopulateCommand: ~
