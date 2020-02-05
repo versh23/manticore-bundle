@@ -2,4 +2,31 @@ services:
     _defaults:
         public: false
 
-    Versh23\ManticoreBundle\Command\PopulateCommand: ~
+    Versh23\ManticoreBundle\Command\PopulateCommand:
+        arguments:
+            - '@manticore.index_manager_registry'
+            - '@doctrine'
+        tags:
+            - {name: 'console.command'}
+
+    manticore.index_prototype:
+        class: Versh23\ManticoreBundle\Index
+        abstract: true
+        arguments:
+            -
+            -
+            -
+            -
+    manticore.index_manager_prototype:
+        class: Versh23\ManticoreBundle\IndexManager
+        abstract: true
+        arguments:
+            -
+            -
+    manticore.index_manager_registry:
+        class: Versh23\ManticoreBundle\IndexManagerRegistry
+        arguments:
+            - []
+            - []
+    Versh23\ManticoreBundle\IndexManagerRegistry:
+        alias: manticore.index_manager_registry
