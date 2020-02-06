@@ -95,6 +95,8 @@ class PopulateCommand extends Command
 
         $indexManager->flushIndex();
 
+        $io->newLine(3);
+        $io->success('Complete');
 
         return 0;
     }
