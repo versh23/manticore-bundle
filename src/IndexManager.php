@@ -102,8 +102,6 @@ class IndexManager
         }
 
         $sq->execute();
-
-        sleep(1);
     }
 
     private function createInsertQuery($object, ?SphinxQL $sphinxQL = null): SphinxQL
