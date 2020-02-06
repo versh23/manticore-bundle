@@ -5,12 +5,16 @@ namespace Versh23\ManticoreBundle;
 
 
 use App\Entity\Article;
+use Doctrine\Common\Inflector\Inflector;
 use Doctrine\ORM\EntityRepository;
 use Foolz\SphinxQL\Drivers\ConnectionBase;
 use Foolz\SphinxQL\Helper;
 use Foolz\SphinxQL\SphinxQL;
 use Pagerfanta\Adapter\FixedAdapter;
 use Pagerfanta\Pagerfanta;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
 class IndexManager
 {
@@ -21,10 +25,21 @@ class IndexManager
     private $connection;
     private $index;
 
+    private $propertyAccessor =  null;
+
     public function __construct(ConnectionBase $connection, Index $index)
     {
         $this->connection = $connection;
         $this->index = $index;
+    }
+
+    private function getPropertyAccessor(): PropertyAccessor
+    {
+        if ($this->propertyAccessor === null) {
+            $this->propertyAccessor = PropertyAccess::createPropertyAccessor();
+        }
+
+        return $this->propertyAccessor;
     }
 
     public function createQuery(): SphinxQL
@@ -52,9 +67,73 @@ class IndexManager
 
     }
 
-    public function insert(): void
+    private function getValue($object, string $property, string $type = Index::ATTR_TYPE_STRING)
+    {
+        $propertyAccessor = $this->getPropertyAccessor();
+        $value = $propertyAccessor->getValue($object, $property);
+
+        switch ($type) {
+            case Index::ATTR_TYPE_INT:
+                return (int) $value;
+            case Index::ATTR_TYPE_TIMESTAMP:
+                if ($value instanceof \DateTimeInterface) {
+                    return $value->getTimestamp();
+                }
+                break;
+            case Index::ATTR_TYPE_STRING:
+            default:
+                return (string) $value;
+        }
+
+        throw new \Exception('cant get value for property ' . $property);
+    }
+
+    public function bulkInsert(array $objects): void
     {
 
+        if (!count($objects)) {
+            return;
+        }
+
+        $sq = null;
+
+        foreach ($objects as $object) {
+            $sq = $this->createInsertQuery($object, $sq);
+        }
+
+        $sq->execute();
+
+        sleep(1);
+    }
+
+    private function createInsertQuery($object, ?SphinxQL $sphinxQL = null): SphinxQL
+    {
+        $index = $this->getIndex();
+
+        $columns = [self::IDENTIFIER];
+        $values = [$this->getValue($object, self::IDENTIFIER, Index::ATTR_TYPE_INT)];
+
+        foreach ($index->getFields() as $name => $field) {
+            $columns[] = $name;
+            $values[] = $this->getValue($object, $field['property'], Index::ATTR_TYPE_STRING);
+        }
+
+        foreach ($index->getAttributes() as $name => $attribute) {
+            $columns[] = $name;
+            $values[] = $this->getValue($object, $attribute['property'], $attribute['type']);
+        }
+
+
+        $sq = $sphinxQL ?: (new SphinxQL($this->connection))->insert()->into($index->getName());
+        $sq->columns($columns);
+        $sq->values($values);
+
+        return $sq;
+    }
+
+    public function insert($object): void
+    {
+        $this->createInsertQuery($object)->execute();
     }
 
     public function update(): void

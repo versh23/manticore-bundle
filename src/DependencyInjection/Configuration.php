@@ -26,7 +26,21 @@ class Configuration implements ConfigurationInterface
                         ->children()
                             ->scalarNode('class')->end()
                             ->arrayNode('fields')
-                                ->scalarPrototype()->end()
+                                ->beforeNormalization()
+                                    ->always(function ($fields) {
+                                        foreach ($fields as $name => &$field) {
+                                            if (!isset($attribute['property'])) {
+                                                $field['property'] = $name;
+                                            }
+                                        }
+                                        return $fields;
+                                    })
+                                ->end()
+                                ->arrayPrototype()
+                                    ->children()
+                                        ->scalarNode('property')->end()
+                                    ->end()
+                                ->end()
                             ->end()
                             ->arrayNode('attributes')
                                 ->beforeNormalization()

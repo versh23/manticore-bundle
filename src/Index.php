@@ -6,6 +6,11 @@ namespace Versh23\ManticoreBundle;
 
 class Index
 {
+
+    public const ATTR_TYPE_STRING = 'string';
+    public const ATTR_TYPE_TIMESTAMP = 'timestamp';
+    public const ATTR_TYPE_INT = 'int';
+
     private $name;
     private $fields;
     private $attributes;
@@ -33,4 +38,11 @@ class Index
     {
         return $this->class;
     }
+
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+
+
 }

@@ -7,6 +7,8 @@ namespace Versh23\ManticoreBundle\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
+use Pagerfanta\Adapter\DoctrineORMAdapter;
+use Pagerfanta\Pagerfanta;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -18,6 +20,9 @@ use Versh23\ManticoreBundle\IndexManagerRegistry;
 
 class PopulateCommand extends Command
 {
+
+    private const LIMIT = 100;
+
     protected static $defaultName = 'manticore:index:populate';
 
     private $registry;
@@ -44,15 +49,12 @@ class PopulateCommand extends Command
 
         $index = $input->getArgument('index');
 
+        $io->block('Start populate index ' . $index);
+
         $class = $this->registry->getClassByIndex($index);
+        $indexManager = $this->registry->getIndexManager($index);
 
-        $manager = $this->registry->getIndexManager($index);
-
-        $manager->truncateIndex();
-
-
-        $page = 1;
-        $limit = 2;
+        $indexManager->truncateIndex();
 
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $this->managerRegistry
@@ -60,32 +62,38 @@ class PopulateCommand extends Command
             ->getRepository($class)
             ->createQueryBuilder(IndexManager::ALIAS);
 
-        $queryBuilder->setMaxResults($limit);
-        $queryBuilder->setFirstResult(0);
-        $paginator = new Paginator($queryBuilder);
 
-        $lastPage = (int) ceil($paginator->count() / $limit);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
+        $pager = new Pagerfanta($adapter);
+        $pager->setMaxPerPage(self::LIMIT);
+        $pager->setCurrentPage(1);
 
-        while ($page <= $lastPage) {
+        $lastPage = $pager->getNbPages();
+        $page = $pager->getCurrentPage();
 
-            $offset = ($page - 1) * $limit;
+        $io->block(sprintf('Start with page = %s, limit = %s', $pager->getCurrentPage(), $pager->getMaxPerPage()));
 
-            $queryBuilder->setMaxResults($limit);
-            $queryBuilder->setFirstResult($offset);
+        $progressBar = $io->createProgressBar($pager->getNbResults());
+        $progressBar->start();
 
-            $paginator = new Paginator($queryBuilder);
+        do {
+            $pager->setCurrentPage($page);
+            $objects = $pager->getCurrentPageResults();
 
-            //insert
-            $objects = iterator_to_array($paginator->getIterator());
+            if ($objects instanceof \Traversable) {
+                $objects = iterator_to_array($objects);
+            }
 
-            $manager->insertMany($objects);
+            $indexManager->bulkInsert($objects);
+
+            $progressBar->advance(count($objects));
 
             $page++;
+        } while ($page <= $lastPage);
 
-        }
+        $progressBar->finish();
 
-
-        $manager->flushIndex();
+        $indexManager->flushIndex();
 
 
         return 0;
