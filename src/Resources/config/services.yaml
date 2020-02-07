@@ -9,6 +9,12 @@ services:
         tags:
             - {name: 'console.command'}
 
+    Versh23\ManticoreBundle\Command\IndexConfigCommand:
+        arguments:
+            - '@manticore.index_manager_registry'
+        tags:
+            - {name: 'console.command'}
+
     manticore.index_prototype:
         class: Versh23\ManticoreBundle\Index
         abstract: true

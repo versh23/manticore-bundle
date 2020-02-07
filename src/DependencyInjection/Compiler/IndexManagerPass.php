@@ -1,7 +1,8 @@
 <?php
 
-namespace Versh23\ManticoreBundle\DependencyInjection\Compiler;
+declare(strict_types=1);
 
+namespace Versh23\ManticoreBundle\DependencyInjection\Compiler;
 
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -9,9 +10,8 @@ use Symfony\Component\DependencyInjection\Reference;
 
 class IndexManagerPass implements CompilerPassInterface
 {
-
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function process(ContainerBuilder $container)
     {

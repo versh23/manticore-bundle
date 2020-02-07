@@ -1,12 +1,10 @@
 <?php
 
+declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Command;
 
-
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\QueryBuilder;
-use Doctrine\ORM\Tools\Pagination\Paginator;
+use Doctrine\ORM\EntityRepository;
 use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Pagerfanta;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
@@ -20,18 +18,17 @@ use Versh23\ManticoreBundle\IndexManagerRegistry;
 
 class PopulateCommand extends Command
 {
-
     private const LIMIT = 100;
 
     protected static $defaultName = 'manticore:index:populate';
 
-    private $registry;
+    private $indexManagerRegistry;
     private $managerRegistry;
 
-    public function __construct(IndexManagerRegistry $registry,  ManagerRegistry $managerRegistry)
+    public function __construct(IndexManagerRegistry $indexManagerRegistry, ManagerRegistry $managerRegistry)
     {
         parent::__construct();
-        $this->registry = $registry;
+        $this->indexManagerRegistry = $indexManagerRegistry;
         $this->managerRegistry = $managerRegistry;
     }
 
@@ -47,26 +44,31 @@ class PopulateCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $index = $input->getArgument('index');
+        //TODO all indexes
+        $indexName = $input->getArgument('index');
 
-        $io->block('Start populate index ' . $index);
+        //TODO configure
+        $limit = self::LIMIT;
+        $page = 1;
 
-        $class = $this->registry->getClassByIndex($index);
-        $indexManager = $this->registry->getIndexManager($index);
+        $io->block('Start populate index '.$indexName);
+
+        $class = $this->indexManagerRegistry->getClassByIndex($indexName);
+        $indexManager = $this->indexManagerRegistry->getIndexManager($indexName);
 
         $indexManager->truncateIndex();
 
-        /** @var QueryBuilder $queryBuilder */
-        $queryBuilder = $this->managerRegistry
+        /** @var EntityRepository $repository */
+        $repository = $this->managerRegistry
             ->getManagerForClass($class)
-            ->getRepository($class)
-            ->createQueryBuilder(IndexManager::ALIAS);
+            ->getRepository($class);
 
+        $queryBuilder = $repository->createQueryBuilder(IndexManager::ALIAS);
 
         $adapter = new DoctrineORMAdapter($queryBuilder);
         $pager = new Pagerfanta($adapter);
-        $pager->setMaxPerPage(self::LIMIT);
-        $pager->setCurrentPage(1);
+        $pager->setMaxPerPage($limit);
+        $pager->setCurrentPage($page);
 
         $lastPage = $pager->getNbPages();
         $page = $pager->getCurrentPage();
@@ -88,7 +90,7 @@ class PopulateCommand extends Command
 
             $progressBar->advance(count($objects));
 
-            $page++;
+            ++$page;
         } while ($page <= $lastPage);
 
         $progressBar->finish();

@@ -1,17 +1,17 @@
 <?php
 
+declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\DependencyInjection;
 
-
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Versh23\ManticoreBundle\Index;
 
 class Configuration implements ConfigurationInterface
 {
-
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function getConfigTreeBuilder()
     {
@@ -33,6 +33,7 @@ class Configuration implements ConfigurationInterface
                                                 $field['property'] = $name;
                                             }
                                         }
+
                                         return $fields;
                                     })
                                 ->end()
@@ -48,13 +49,14 @@ class Configuration implements ConfigurationInterface
                                         foreach ($attributes as $name => &$attribute) {
                                             if (is_string($attribute)) {
                                                 $attribute = [
-                                                    'type' => $attribute
+                                                    'type' => $attribute,
                                                 ];
                                             }
                                             if (!isset($attribute['property'])) {
                                                 $attribute['property'] = $name;
                                             }
                                         }
+
                                         return $attributes;
                                     })
                                 ->end()
@@ -64,8 +66,8 @@ class Configuration implements ConfigurationInterface
                                         ->scalarNode('type')->end()
                                     ->end()
                                     ->validate()
-                                        ->ifTrue(function ($v) {return !isset($v['type']);})
-                                        ->thenInvalid('Type is not defined')
+                                        ->ifTrue(function ($v) {return !isset($v['type']) || !in_array($v['type'], Index::$attrTypes); })
+                                        ->thenInvalid('Type is not valid. Must be ['.implode(', ', Index::$attrTypes).']')
                                     ->end()
                                 ->end()
                             ->end()

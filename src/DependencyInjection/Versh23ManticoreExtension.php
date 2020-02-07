@@ -1,24 +1,21 @@
 <?php
 
+declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\DependencyInjection;
 
-
+use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
-use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
-use Versh23\ManticoreBundle\Connection;
-use Versh23\ManticoreBundle\Index;
 
 class Versh23ManticoreExtension extends Extension
 {
-
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function load(array $configs, ContainerBuilder $container)
     {
@@ -34,13 +31,12 @@ class Versh23ManticoreExtension extends Extension
         $connectionRef->addMethodCall('setParams', [
             [
                 'host' => $config['host'],
-                'port' => $config['port']
+                'port' => $config['port'],
             ],
         ]);
         $container->setDefinition($connectionId, $connectionRef);
 
         foreach ($config['indexes'] as $name => $indexConfig) {
-
             $indexId = sprintf('manticore.index.%s', $name);
             $indexDef = new ChildDefinition('manticore.index_prototype');
             $indexDef->replaceArgument(0, $name);
@@ -57,8 +53,5 @@ class Versh23ManticoreExtension extends Extension
 
             $container->setDefinition($indexManagerId, $indexManagerDef);
         }
-
-
-
     }
 }
