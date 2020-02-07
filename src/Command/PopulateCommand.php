@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Command;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
 use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Pagerfanta;
-use Symfony\Bridge\Doctrine\ManagerRegistry;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
