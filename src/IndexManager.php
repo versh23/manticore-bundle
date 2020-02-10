@@ -7,6 +7,7 @@ namespace Versh23\ManticoreBundle;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
 use Foolz\SphinxQL\Drivers\ConnectionInterface;
+use Foolz\SphinxQL\Drivers\ResultSetInterface;
 use Foolz\SphinxQL\Helper;
 use Foolz\SphinxQL\SphinxQL;
 use Pagerfanta\Adapter\FixedAdapter;
@@ -32,9 +33,9 @@ class IndexManager
         $this->managerRegistry = $managerRegistry;
     }
 
-    public function truncateIndex(): void
+    public function truncateIndex(): ResultSetInterface
     {
-        $this->createHelper()->truncateRtIndex($this->getIndex()->getName())->execute();
+        return $this->createHelper()->truncateRtIndex($this->getIndex()->getName())->execute();
     }
 
     public function createHelper(): Helper
@@ -42,14 +43,14 @@ class IndexManager
         return new Helper($this->connection);
     }
 
-    public function flushIndex(): void
+    public function flushIndex(): ResultSetInterface
     {
-        $this->createHelper()->flushRtIndex($this->getIndex()->getName())->execute();
+        return $this->createHelper()->flushRtIndex($this->getIndex()->getName())->execute();
     }
 
-    public function replace($object): void
+    public function replace($object): ResultSetInterface
     {
-        $this->createInsertReplaceQuery($object, false)->execute();
+        return $this->createInsertReplaceQuery($object, false)->execute();
     }
 
     private function createInsertReplaceQuery($object, bool $insert = true, ?SphinxQL $sphinxQL = null): SphinxQL
@@ -127,10 +128,10 @@ class IndexManager
         return $this->propertyAccessor;
     }
 
-    public function bulkInsert(array $objects): void
+    public function bulkInsert(array $objects): ?ResultSetInterface
     {
         if (!count($objects)) {
-            return;
+            return null;
         }
 
         $sq = null;
@@ -139,12 +140,12 @@ class IndexManager
             $sq = $this->createInsertReplaceQuery($object, true, $sq);
         }
 
-        $sq->execute();
+        return $sq->execute();
     }
 
-    public function insert($object): void
+    public function insert($object): ResultSetInterface
     {
-        $this->createInsertReplaceQuery($object, true)->execute();
+        return $this->createInsertReplaceQuery($object, true)->execute();
     }
 
     public function update($object): void
