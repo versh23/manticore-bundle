@@ -1,0 +1,24 @@
+language: php
+
+services:
+    - docker
+
+cache:
+    directories:
+        - $HOME/.composer/cache
+
+env:
+    global:
+        - MANTICORE_HOST="127.0.0.1"
+
+before_install:
+    - docker pull manticoresearch/manticore
+    - docker run -d -p 127.0.0.1:9306:9306 manticoresearch/manticore
+
+install:
+    - composer install
+
+script:
+    - vendor/bin/php-cs-fixer fix -v --dry-run
+    - vendor/bin/phpstan analyse
+    - vendor/bin/phpunit

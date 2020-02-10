@@ -36,7 +36,7 @@ class IndexManagerTest extends TestCase
         $connection = $this->createPartialMock(Connection::class, [
             'query', 'multiQuery',
         ]);
-        $connection->setParams(['host' => 'manticore']);
+        $connection->setParams(['host' => $_SERVER['MANTICORE_HOST']]);
 
         return $connection;
     }
