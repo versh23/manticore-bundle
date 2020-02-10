@@ -14,6 +14,7 @@ use Foolz\SphinxQL\Drivers\MultiResultSet;
 use Foolz\SphinxQL\Drivers\Pdo\Connection;
 use Foolz\SphinxQL\Drivers\ResultSet;
 use Foolz\SphinxQL\Drivers\ResultSetInterface;
+use Pagerfanta\Pagerfanta;
 use PHPUnit\Framework\TestCase;
 use Versh23\ManticoreBundle\Index;
 use Versh23\ManticoreBundle\IndexManager;
@@ -38,6 +39,27 @@ class IndexManagerTest extends TestCase
         $connection->setParams(['host' => 'manticore']);
 
         return $connection;
+    }
+
+    private function createManagerRegistry(array $result)
+    {
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+
+        $repository = $this->createMock(EntityRepository::class);
+
+        $builder = $this->createMock(QueryBuilder::class);
+        $builder->method('expr')->willReturn(new Expr());
+        $builder->method('andWhere')->willReturn($builder);
+        $query = $this->createMock(AbstractQuery::class);
+        $query->method('getResult')->willReturn($result);
+        $builder->method('getQuery')->willReturn($query);
+
+        $repository->method('createQueryBuilder')->willReturn($builder);
+        $objectManager = $this->createMock(ObjectManager::class);
+        $objectManager->method('getRepository')->willReturn($repository);
+        $managerRegistry->method('getManagerForClass')->willReturn($objectManager);
+
+        return $managerRegistry;
     }
 
     public function testInsert()
@@ -103,6 +125,12 @@ class IndexManagerTest extends TestCase
 
     public function testFind()
     {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
         $index = $this->createIndex();
 
         $connection = $this->createConnection();
@@ -112,40 +140,73 @@ class IndexManagerTest extends TestCase
         $resultSet
             ->expects($this->at(0))
             ->method('fetchAllAssoc')->willReturn([
-            ['id' => 1],
             ['id' => 2],
+            ['id' => 1],
         ]);
 
         $resultSet
             ->expects($this->at(1))
             ->method('fetchAllAssoc')->willReturn([
-                ['Variable_name' => 'total_found', 'Value' => 2],
+                ['Variable_name' => 'total_found', 'Value' => 10],
             ]);
         $multiResultSet->method('getNext')->willReturn($resultSet);
         $connection
             ->expects($this->once())
             ->method('multiQuery')
-            ->with(['SELECT id, WEIGHT() as w FROM test_index WHERE MATCH(\'(@(name) test)\') ORDER BY w DESC LIMIT 9, 1', 'SHOW META'])
+            ->with(['SELECT id, WEIGHT() as w FROM test_index WHERE MATCH(\'(@(name) test)\') ORDER BY w DESC LIMIT 0, 2', 'SHOW META'])
             ->willReturn($multiResultSet);
 
-        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $managerRegistry = $this->createManagerRegistry([$entity, $entity2]);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
 
-        $repository = $this->createMock(EntityRepository::class);
+        $result = $indexManager->find('test', 1, 2);
 
-        $builder = $this->createMock(QueryBuilder::class);
-        $builder->method('expr')->willReturn(new Expr());
-        $builder->method('andWhere')->willReturn($builder);
-        $query = $this->createMock(AbstractQuery::class);
-        $query->method('getResult')->willReturn([]);
-        $builder->method('getQuery')->willReturn($query);
+        $this->assertEquals($entity2, $result[0]);
+        $this->assertEquals($entity, $result[1]);
+    }
 
-        $repository->method('createQueryBuilder')->willReturn($builder);
-        $objectManager = $this->createMock(ObjectManager::class);
-        $objectManager->method('getRepository')->willReturn($repository);
-        $managerRegistry->method('getManagerForClass')->willReturn($objectManager);
+    public function testFindPaginated()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $multiResultSet = $this->createMock(MultiResultSet::class);
+        $resultSet = $this->createMock(ResultSetInterface::class);
+        $resultSet
+            ->expects($this->at(0))
+            ->method('fetchAllAssoc')->willReturn([
+                ['id' => 2],
+                ['id' => 1],
+            ]);
+
+        $resultSet
+            ->expects($this->at(1))
+            ->method('fetchAllAssoc')->willReturn([
+                ['Variable_name' => 'total_found', 'Value' => 10],
+            ]);
+        $multiResultSet->method('getNext')->willReturn($resultSet);
+        $connection
+            ->expects($this->once())
+            ->method('multiQuery')
+            ->with(['SELECT id, WEIGHT() as w FROM test_index WHERE MATCH(\'(@(name) test)\') ORDER BY w DESC LIMIT 0, 2', 'SHOW META'])
+            ->willReturn($multiResultSet);
+
+        $managerRegistry = $this->createManagerRegistry([$entity, $entity2]);
 
         $indexManager = new IndexManager($connection, $index, $managerRegistry);
 
-        $indexManager->find('test', 1, 10);
+        $result = $indexManager->findPaginated('test', 1, 2);
+
+        $this->assertInstanceOf(Pagerfanta::class, $result);
+        $this->assertEquals(10, $result->getNbResults());
+        $this->assertEquals($entity2, $result->getCurrentPageResults()[0]);
+        $this->assertEquals($entity, $result->getCurrentPageResults()[1]);
     }
 }

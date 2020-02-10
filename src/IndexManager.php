@@ -181,7 +181,7 @@ class IndexManager
         return [$ids, $this->parseTotal($meta)];
     }
 
-    private function doFind(string $query = '', int $limit = 10, int $page = 1): array
+    private function doFind(string $query = '', int $page = 1, int $limit = 10): array
     {
         $resultData['total'] = 0;
         $resultData['items'] = [];
