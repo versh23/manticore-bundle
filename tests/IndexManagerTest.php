@@ -209,4 +209,97 @@ class IndexManagerTest extends TestCase
         $this->assertEquals($entity2, $result->getCurrentPageResults()[0]);
         $this->assertEquals($entity, $result->getCurrentPageResults()[1]);
     }
+
+    public function testFindSphinxQL()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $multiResultSet = $this->createMock(MultiResultSet::class);
+        $resultSet = $this->createMock(ResultSetInterface::class);
+        $resultSet
+            ->expects($this->at(0))
+            ->method('fetchAllAssoc')->willReturn([
+                ['id' => 2],
+                ['id' => 1],
+            ]);
+
+        $resultSet
+            ->expects($this->at(1))
+            ->method('fetchAllAssoc')->willReturn([
+                ['Variable_name' => 'total_found', 'Value' => 10],
+            ]);
+        $multiResultSet->method('getNext')->willReturn($resultSet);
+        $connection
+            ->expects($this->once())
+            ->method('multiQuery')
+            ->with(['SELECT * FROM test_index WHERE status = \'enabled\' LIMIT 0, 2', 'SHOW META'])
+            ->willReturn($multiResultSet);
+
+        $managerRegistry = $this->createManagerRegistry([$entity, $entity2]);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+
+        $query = $indexManager->createQuery();
+        $query->select('*')->from('test_index')->where('status', '=', 'enabled');
+
+        $result = $indexManager->find($query, 1, 2);
+
+        $this->assertEquals($entity2, $result[0]);
+        $this->assertEquals($entity, $result[1]);
+    }
+
+    public function testFindSqphinxQLPaginated()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $multiResultSet = $this->createMock(MultiResultSet::class);
+        $resultSet = $this->createMock(ResultSetInterface::class);
+        $resultSet
+            ->expects($this->at(0))
+            ->method('fetchAllAssoc')->willReturn([
+                ['id' => 2],
+                ['id' => 1],
+            ]);
+
+        $resultSet
+            ->expects($this->at(1))
+            ->method('fetchAllAssoc')->willReturn([
+                ['Variable_name' => 'total_found', 'Value' => 10],
+            ]);
+        $multiResultSet->method('getNext')->willReturn($resultSet);
+        $connection
+            ->expects($this->once())
+            ->method('multiQuery')
+            ->with(['SELECT * FROM test_index WHERE status = \'enabled\' LIMIT 0, 2', 'SHOW META'])
+            ->willReturn($multiResultSet);
+
+        $managerRegistry = $this->createManagerRegistry([$entity, $entity2]);
+
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+
+        $query = $indexManager->createQuery();
+        $query->select('*')->from('test_index')->where('status', '=', 'enabled');
+
+        $result = $indexManager->findPaginated($query, 1, 2);
+
+        $this->assertInstanceOf(Pagerfanta::class, $result);
+        $this->assertEquals(10, $result->getNbResults());
+        $this->assertEquals($entity2, $result->getCurrentPageResults()[0]);
+        $this->assertEquals($entity, $result->getCurrentPageResults()[1]);
+    }
 }

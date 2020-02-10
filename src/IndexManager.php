@@ -156,7 +156,7 @@ class IndexManager
         throw new ManticoreException('Not implemented yet');
     }
 
-    public function find(string $query = '', int $page = 1, int $limit = 10): array
+    public function find($query = '', int $page = 1, int $limit = 10): array
     {
         $resultData = $this->doFind($query, $page, $limit);
 
@@ -181,7 +181,7 @@ class IndexManager
         return [$ids, $this->parseTotal($meta)];
     }
 
-    private function doFind(string $query = '', int $page = 1, int $limit = 10): array
+    private function doFind($query = '', int $page = 1, int $limit = 10): array
     {
         $resultData['total'] = 0;
         $resultData['items'] = [];
@@ -189,12 +189,17 @@ class IndexManager
         $page = max($page, 1);
         $offset = ($page - 1) * $limit;
 
-        $baseQuery = $this->createBaseQuery();
-        $baseQuery->limit($offset, $limit);
+        if (!$query instanceof SphinxQL) {
+            $baseQuery = $this->createBaseQuery();
 
-        if ($query) {
-            $baseQuery->match($this->getIndex()->getFieldsName(), $query);
+            if (is_string($query) && '' !== $query) {
+                $baseQuery->match($this->getIndex()->getFieldsName(), $query);
+            }
+        } else {
+            $baseQuery = $query;
         }
+
+        $baseQuery->limit($offset, $limit);
 
         [$ids, $total] = $this->getIdsResults($baseQuery);
 
@@ -278,7 +283,7 @@ class IndexManager
         );
     }
 
-    public function findPaginated(string $query = '', int $page = 1, int $limit = 10): Pagerfanta
+    public function findPaginated($query = '', int $page = 1, int $limit = 10): Pagerfanta
     {
         $resultData = $this->doFind($query, $page, $limit);
 
