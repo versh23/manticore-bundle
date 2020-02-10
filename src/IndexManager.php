@@ -6,7 +6,7 @@ namespace Versh23\ManticoreBundle;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
-use Foolz\SphinxQL\Drivers\ConnectionBase;
+use Foolz\SphinxQL\Drivers\ConnectionInterface;
 use Foolz\SphinxQL\Helper;
 use Foolz\SphinxQL\SphinxQL;
 use Pagerfanta\Adapter\FixedAdapter;
@@ -25,7 +25,7 @@ class IndexManager
     private $propertyAccessor = null;
     private $managerRegistry;
 
-    public function __construct(ConnectionBase $connection, Index $index, ManagerRegistry $managerRegistry)
+    public function __construct(ConnectionInterface $connection, Index $index, ManagerRegistry $managerRegistry)
     {
         $this->connection = $connection;
         $this->index = $index;
@@ -34,7 +34,7 @@ class IndexManager
 
     public function truncateIndex(): void
     {
-        $this->createHelper()->truncateRtIndex($this->index->getName())->execute();
+        $this->createHelper()->truncateRtIndex($this->getIndex()->getName())->execute();
     }
 
     public function createHelper(): Helper
@@ -44,7 +44,7 @@ class IndexManager
 
     public function flushIndex(): void
     {
-        $this->createHelper()->flushRtIndex($this->index->getName())->execute();
+        $this->createHelper()->flushRtIndex($this->getIndex()->getName())->execute();
     }
 
     public function replace($object): void
@@ -70,7 +70,7 @@ class IndexManager
         }
 
         if (!$sphinxQL) {
-            $sphinxQL = (new SphinxQL($this->connection));
+            $sphinxQL = $this->createQuery();
             $sphinxQL = $insert ? $sphinxQL->insert()->into($index->getName()) : $sphinxQL->replace()->into($index->getName());
         }
 
@@ -111,7 +111,7 @@ class IndexManager
 
                 return (string) $value;
             case Index::ATTR_TYPE_MVA:
-                throw new \Exception('Not implemented yet');
+                throw new ManticoreException('Not implemented yet');
             case Index::ATTR_TYPE_STRING:
             default:
                 return (string) $value;
@@ -147,12 +147,12 @@ class IndexManager
         $this->createInsertReplaceQuery($object, true)->execute();
     }
 
-    public function update(): void
+    public function update($object): void
     {
         //TODO check update field
         //All attributes types (int, bigint, float, strings, MVA, JSON) can be dynamically updated.
 
-        throw new \Exception('Not implemented yet');
+        throw new ManticoreException('Not implemented yet');
     }
 
     public function find(string $query = '', int $page = 1, int $limit = 10): array
@@ -160,6 +160,24 @@ class IndexManager
         $resultData = $this->doFind($query, $page, $limit);
 
         return $resultData['items'];
+    }
+
+    private function getIdsResults(SphinxQL $query): array
+    {
+        $result = $query
+            ->enqueue($this->createHelper()->showMeta())
+            ->executeBatch();
+
+        $rawItems = $result->getNext()->fetchAllAssoc();
+
+        $ids = [];
+        foreach ($rawItems as $item) {
+            $ids[] = (int) $item['id'];
+        }
+
+        $meta = $result->getNext()->fetchAllAssoc();
+
+        return [$ids, $this->parseTotal($meta)];
     }
 
     private function doFind(string $query = '', int $limit = 10, int $page = 1): array
@@ -174,23 +192,20 @@ class IndexManager
         $baseQuery->limit($offset, $limit);
 
         if ($query) {
-            $baseQuery->match($this->index->getFields(), $query);
+            $baseQuery->match($this->getIndex()->getFieldsName(), $query);
         }
 
-        $result = $baseQuery
-            ->enqueue($this->createHelper()->showMeta())
-            ->executeBatch();
+        [$ids, $total] = $this->getIdsResults($baseQuery);
 
-        $rawItems = $result->getNext()->fetchAllAssoc();
-        $ids = [];
-        foreach ($rawItems as $item) {
-            $ids[] = (int) $item['id'];
+        $items = [];
+
+        if (count($ids) > 0) {
+            $items = $this->hydrateItems($ids);
+            $this->sort($ids, $items);
         }
 
-        $meta = $result->getNext()->fetchAllAssoc();
-
-        $resultData['total'] = $this->parseTotal($meta);
-        $resultData['items'] = $this->hydrateItems($ids);
+        $resultData['items'] = $items;
+        $resultData['total'] = $total;
 
         return $resultData;
     }
@@ -199,7 +214,7 @@ class IndexManager
     {
         return $this->createQuery()
             ->select('id', 'WEIGHT() as w')
-            ->from($this->index->getName())
+            ->from($this->getIndex()->getName())
             ->orderBy('w', 'DESC');
     }
 
@@ -222,14 +237,19 @@ class IndexManager
         return $total;
     }
 
-    private function hydrateItems(array $ids): array
+    private function getRepository(): EntityRepository
     {
-        $propertyAccessor = $this->getPropertyAccessor();
-
         /** @var EntityRepository $repository */
         $repository = $this->managerRegistry
-            ->getManagerForClass($this->index->getClass())
-            ->getRepository($this->index->getClass());
+            ->getManagerForClass($this->getIndex()->getClass())
+            ->getRepository($this->getIndex()->getClass());
+
+        return $repository;
+    }
+
+    private function hydrateItems(array $ids): array
+    {
+        $repository = $this->getRepository();
 
         $builder = $repository
             //TODO custom builder
@@ -237,7 +257,13 @@ class IndexManager
 
         $builder->andWhere($builder->expr()->in(self::ALIAS.'.'.self::IDENTIFIER, ':values'))
             ->setParameter('values', $ids);
-        $items = $builder->getQuery()->getResult();
+
+        return $builder->getQuery()->getResult();
+    }
+
+    private function sort(array $ids, array &$items)
+    {
+        $propertyAccessor = $this->getPropertyAccessor();
 
         $idPos = array_flip($ids);
         usort(
@@ -249,8 +275,6 @@ class IndexManager
                     $idPos[$propertyAccessor->getValue($b, self::IDENTIFIER)];
             }
         );
-
-        return $items;
     }
 
     public function findPaginated(string $query = '', int $page = 1, int $limit = 10): Pagerfanta

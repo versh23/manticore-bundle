@@ -24,11 +24,15 @@ class IndexManagerRegistry
             }
         }
 
-        throw new \Exception('no class');
+        throw new ManticoreException('no class found by index '.$index);
     }
 
     public function getIndexManager(string $index): IndexManager
     {
+        if (!isset($this->indexMap[$index])) {
+            throw new ManticoreException('no indexManager found by index '.$index);
+        }
+
         return $this->indexMap[$index];
     }
 }

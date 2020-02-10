@@ -49,6 +49,11 @@ class Index
         return $this->fields;
     }
 
+    public function getFieldsName(): array
+    {
+        return array_keys($this->fields);
+    }
+
     public function getClass(): string
     {
         return $this->class;
