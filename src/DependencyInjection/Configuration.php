@@ -29,7 +29,7 @@ class Configuration implements ConfigurationInterface
                                 ->beforeNormalization()
                                     ->always(function ($fields) {
                                         foreach ($fields as $name => &$field) {
-                                            if (!isset($attribute['property'])) {
+                                            if (!isset($field['property'])) {
                                                 $field['property'] = $name;
                                             }
                                         }

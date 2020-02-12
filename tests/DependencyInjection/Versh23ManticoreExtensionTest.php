@@ -34,8 +34,17 @@ class Versh23ManticoreExtensionTest extends TestCase
         $indexDef = $containerBuilder->getDefinition('manticore.index.simple_entity');
         $this->assertSame('simple_entity', $indexDef->getArgument(0));
         $this->assertSame(SimpleEntity::class, $indexDef->getArgument(1));
-        $this->assertSame(['name' => ['property' => 'name']], $indexDef->getArgument(2));
-        $this->assertSame(['status' => ['property' => 'status', 'type' => 'string']], $indexDef->getArgument(3));
+        $this->assertSame(
+            [
+                'description' => ['property' => 'description'],
+                'name' => ['property' => 'name'],
+            ],
+            $indexDef->getArgument(2));
+        $this->assertSame(
+            [
+                'free' => ['type' => 'bool', 'property' => 'free'],
+                'status' => ['property' => 'status', 'type' => 'string'],
+            ], $indexDef->getArgument(3));
 
         $listenerDef = $containerBuilder->getDefinition('manticore.listener.simple_entity');
         $this->assertSame('manticore.index_manager.simple_entity', (string) $listenerDef->getArgument(0));

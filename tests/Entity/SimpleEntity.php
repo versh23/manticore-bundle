@@ -8,7 +8,9 @@ class SimpleEntity
 {
     private $id;
     private $name;
+    private $description;
     private $status;
+    private $free;
 
     public function setId($id)
     {
@@ -42,6 +44,30 @@ class SimpleEntity
     public function setStatus($status)
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    public function setDescription($description)
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    public function getFree()
+    {
+        return $this->free;
+    }
+
+    public function setFree($free)
+    {
+        $this->free = $free;
 
         return $this;
     }

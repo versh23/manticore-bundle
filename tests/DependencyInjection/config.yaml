@@ -5,9 +5,12 @@ versh23_manticore:
         simple_entity:
             class: Versh23\ManticoreBundle\Tests\Entity\SimpleEntity
             fields:
+                description: ~
                 name:
                     property: name
+
             attributes:
+                free: bool
                 status:
                     property: status
                     type: string
