@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Tests;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr;
 use Doctrine\ORM\QueryBuilder;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\Persistence\ObjectManager;
 use Versh23\ManticoreBundle\Index;
 use Versh23\ManticoreBundle\IndexManager;
 

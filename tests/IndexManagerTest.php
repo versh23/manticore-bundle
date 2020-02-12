@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Tests;
 
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Foolz\SphinxQL\Drivers\MultiResultSet;
 use Foolz\SphinxQL\Drivers\Pdo\Connection;
 use Foolz\SphinxQL\Drivers\ResultSet;
