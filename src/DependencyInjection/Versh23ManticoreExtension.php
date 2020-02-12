@@ -25,6 +25,7 @@ class Versh23ManticoreExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yaml');
 
+        //TODO only PDO ?
         $connectionClass = \Foolz\SphinxQL\Drivers\Pdo\Connection::class;
         $connectionId = 'manticore.connection';
         $connectionRef = new Definition($connectionClass);

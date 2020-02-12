@@ -1,0 +1,13 @@
+versh23_manticore:
+    host: 'manticore'
+    port: 9306
+    indexes:
+        simple_entity:
+            class: Versh23\ManticoreBundle\Tests\Entity\SimpleEntity
+            fields:
+                name:
+                    property: name
+            attributes:
+                status:
+                    property: status
+                    type: string

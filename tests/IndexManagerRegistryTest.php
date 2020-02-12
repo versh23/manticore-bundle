@@ -33,8 +33,8 @@ class IndexManagerRegistryTest extends TestCase
         $indexManagerFound = $registry->getIndexManager('test_index');
 
         $this->assertInstanceOf(IndexManager::class, $indexManagerFound);
-        $this->assertEquals($index, $indexManagerFound->getIndex());
-        $this->assertEquals(SimpleEntity::class, $registry->getClassByIndex('test_index'));
+        $this->assertSame($index, $indexManagerFound->getIndex());
+        $this->assertSame(SimpleEntity::class, $registry->getClassByIndex('test_index'));
 
         $this->expectException(ManticoreException::class);
         $registry->getClassByIndex('invalid_index');

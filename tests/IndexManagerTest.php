@@ -161,8 +161,8 @@ class IndexManagerTest extends TestCase
 
         $result = $indexManager->find('test', 1, 2);
 
-        $this->assertEquals($entity2, $result[0]);
-        $this->assertEquals($entity, $result[1]);
+        $this->assertSame($entity2, $result[0]);
+        $this->assertSame($entity, $result[1]);
     }
 
     public function testFindPaginated()
@@ -205,9 +205,9 @@ class IndexManagerTest extends TestCase
         $result = $indexManager->findPaginated('test', 1, 2);
 
         $this->assertInstanceOf(Pagerfanta::class, $result);
-        $this->assertEquals(10, $result->getNbResults());
-        $this->assertEquals($entity2, $result->getCurrentPageResults()[0]);
-        $this->assertEquals($entity, $result->getCurrentPageResults()[1]);
+        $this->assertSame(10, $result->getNbResults());
+        $this->assertSame($entity2, $result->getCurrentPageResults()[0]);
+        $this->assertSame($entity, $result->getCurrentPageResults()[1]);
     }
 
     public function testFindSphinxQL()
@@ -251,8 +251,8 @@ class IndexManagerTest extends TestCase
 
         $result = $indexManager->find($query, 1, 2);
 
-        $this->assertEquals($entity2, $result[0]);
-        $this->assertEquals($entity, $result[1]);
+        $this->assertSame($entity2, $result[0]);
+        $this->assertSame($entity, $result[1]);
     }
 
     public function testFindSqphinxQLPaginated()
@@ -298,8 +298,8 @@ class IndexManagerTest extends TestCase
         $result = $indexManager->findPaginated($query, 1, 2);
 
         $this->assertInstanceOf(Pagerfanta::class, $result);
-        $this->assertEquals(10, $result->getNbResults());
-        $this->assertEquals($entity2, $result->getCurrentPageResults()[0]);
-        $this->assertEquals($entity, $result->getCurrentPageResults()[1]);
+        $this->assertSame(10, $result->getNbResults());
+        $this->assertSame($entity2, $result->getCurrentPageResults()[0]);
+        $this->assertSame($entity, $result->getCurrentPageResults()[1]);
     }
 }
