@@ -50,7 +50,6 @@ class PopulateCommand extends Command
             $limit = $input->getOption('limit');
             $page = $input->getOption('page');
 
-            $class = $indexManager->getIndex()->getClass();
             $indexName = $indexManager->getIndex()->getName();
 
             $io->block('Start populate index '.$indexName);
