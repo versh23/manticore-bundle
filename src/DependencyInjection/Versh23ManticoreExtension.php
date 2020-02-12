@@ -52,6 +52,12 @@ class Versh23ManticoreExtension extends Extension
             $indexManagerDef->replaceArgument(1, new Reference($indexId));
             $indexManagerDef->addTag('manticore.index_manager');
 
+            $listenerId = sprintf('manticore.listener.%s', $name);
+            $listenerDef = new ChildDefinition('manticore.listener_prototype');
+            $listenerDef->replaceArgument(0, new Reference($indexManagerId));
+
+            $container->setDefinition($listenerId, $listenerDef);
+
             $container->setDefinition($indexManagerId, $indexManagerDef);
         }
     }

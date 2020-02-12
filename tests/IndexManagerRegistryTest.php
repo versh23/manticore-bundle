@@ -31,6 +31,11 @@ class IndexManagerRegistryTest extends TestCase
         $registry->addIndexManager($indexManager);
 
         $indexManagerFound = $registry->getIndexManager('test_index');
+        $indexManagerFoundByCLass = $registry->getIndexManagerByClass(SimpleEntity::class);
+
+        $this->assertSame($indexManagerFound, $indexManagerFoundByCLass[0]);
+
+        $this->assertTrue($indexManagerFound->isIndexable(new SimpleEntity()));
 
         $this->assertInstanceOf(IndexManager::class, $indexManagerFound);
         $this->assertSame($index, $indexManagerFound->getIndex());

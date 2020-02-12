@@ -59,7 +59,7 @@ class IndexManager
         $index = $this->getIndex();
 
         $columns = [self::IDENTIFIER];
-        $values = [$this->getValue($object, self::IDENTIFIER, Index::ATTR_TYPE_BIGINT)];
+        $values = [$this->getIdentityValue($object)];
 
         foreach ($index->getFields() as $name => $field) {
             $columns[] = $name;
@@ -143,6 +143,35 @@ class IndexManager
         }
 
         return $this->propertyAccessor;
+    }
+
+    public function delete(array $ids): ?ResultSetInterface
+    {
+        if (!count($ids)) {
+            return null;
+        }
+
+        $sq = $this->createQuery()
+            ->delete()
+            ->from($this->getIndex()->getName())
+            ->where('id', 'in', $ids);
+
+        return $sq->execute();
+    }
+
+    public function bulkReplace(array $objects): ?ResultSetInterface
+    {
+        if (!count($objects)) {
+            return null;
+        }
+
+        $sq = null;
+
+        foreach ($objects as $object) {
+            $sq = $this->createInsertReplaceQuery($object, false, $sq);
+        }
+
+        return $sq->execute();
     }
 
     public function bulkInsert(array $objects): ?ResultSetInterface
@@ -286,16 +315,14 @@ class IndexManager
 
     private function sort(array $ids, array &$items)
     {
-        $propertyAccessor = $this->getPropertyAccessor();
-
         $idPos = array_flip($ids);
         usort(
             $items,
-            function ($a, $b) use ($idPos, $propertyAccessor) {
+            function ($a, $b) use ($idPos) {
                 return
-                    $idPos[$propertyAccessor->getValue($a, self::IDENTIFIER)]
+                    $idPos[$this->getIdentityValue($a)]
                     >
-                    $idPos[$propertyAccessor->getValue($b, self::IDENTIFIER)];
+                    $idPos[$this->getIdentityValue($b)];
             }
         );
     }
@@ -316,5 +343,15 @@ class IndexManager
         $adapter = new FixedAdapter($total, $items);
 
         return new Pagerfanta($adapter);
+    }
+
+    public function getIdentityValue($object)
+    {
+        return (int) $this->getPropertyAccessor()->getValue($object, self::IDENTIFIER);
+    }
+
+    public function isIndexable($object): bool
+    {
+        return get_class($object) === $this->getIndex()->getClass();
     }
 }

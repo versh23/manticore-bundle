@@ -40,6 +40,26 @@ class IndexManagerRegistry
     /**
      * @return IndexManager[]
      */
+    public function getIndexManagerByClass(string $class): array
+    {
+        if (!isset($this->classMap[$class])) {
+            throw new ManticoreException('no indexManager found by class '.$class);
+        }
+
+        $indexes = $this->classMap[$class];
+
+        $managers = [];
+
+        foreach ($indexes as $index) {
+            $managers[] = $this->getIndexManager($index);
+        }
+
+        return $managers;
+    }
+
+    /**
+     * @return IndexManager[]
+     */
     public function getAllIndexManagers(): array
     {
         return array_values($this->indexMap);

@@ -73,6 +73,46 @@ class IndexManagerTest extends TestCase
         $indexManager->replace($entity);
     }
 
+    public function testDelete()
+    {
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $connection
+            ->expects($this->once())
+            ->method('query')
+            ->with('DELETE FROM test_index WHERE id IN (1, 2)')
+            ->willReturn($this->createMock(ResultSet::class));
+
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+        $indexManager->delete([1, 2]);
+    }
+
+    public function testBulkReplace()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $connection
+            ->expects($this->once())
+            ->method('query')
+            ->with('REPLACE INTO test_index (id, name, status) VALUES (1, \'name1\', \'enabled\'), (2, \'name2\', \'disabled\')')
+            ->willReturn($this->createMock(ResultSet::class));
+
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+        $indexManager->bulkReplace([$entity, $entity2]);
+    }
+
     public function testBulkInsert()
     {
         $entity = new SimpleEntity();

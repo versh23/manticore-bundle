@@ -12,11 +12,11 @@ class Listener
     public $scheduledForUpdate = [];
     public $scheduledForDeletion = [];
 
-    private $managerRegistry;
+    private $indexManager;
 
-    public function __construct(IndexManagerRegistry $managerRegistry)
+    public function __construct(IndexManager $indexManager)
     {
-        $this->managerRegistry = $managerRegistry;
+        $this->indexManager = $indexManager;
     }
 
     public function postFlush()
@@ -28,55 +28,42 @@ class Listener
     {
         $entity = $eventArgs->getObject();
 
-//        if ($this->objectPersister->handlesObject($entity)) {
-//            $this->scheduleForDeletion($entity);
-//        }
+        if ($this->indexManager->isIndexable($entity)) {
+            $this->scheduledForDeletion[] = $this->indexManager->getIdentityValue($entity);
+        }
     }
 
     public function postUpdate(LifecycleEventArgs $eventArgs)
     {
         $entity = $eventArgs->getObject();
 
-//        if ($this->objectPersister->handlesObject($entity)) {
-//            if ($this->isObjectIndexable($entity)) {
-//                $this->scheduledForUpdate[] = $entity;
-//            } else {
-//                // Delete if no longer indexable
-//                $this->scheduleForDeletion($entity);
-//            }
-//        }
+        if ($this->indexManager->isIndexable($entity)) {
+            $this->scheduledForUpdate[] = $entity;
+        }
     }
 
     public function postPersist(LifecycleEventArgs $eventArgs)
     {
         $entity = $eventArgs->getObject();
-//
-//        if ($this->objectPersister->handlesObject($entity) && $this->isObjectIndexable($entity)) {
-//            $this->scheduledForInsertion[] = $entity;
-//        }
+
+        if ($this->indexManager->isIndexable($entity)) {
+            $this->scheduledForInsertion[] = $entity;
+        }
     }
 
     private function persistScheduled()
     {
-//        if (count($this->scheduledForInsertion)) {
-//            $this->objectPersister->insertMany($this->scheduledForInsertion);
-//            $this->scheduledForInsertion = [];
-//        }
-//        if (count($this->scheduledForUpdate)) {
-//            $this->objectPersister->replaceMany($this->scheduledForUpdate);
-//            $this->scheduledForUpdate = [];
-//        }
-//        if (count($this->scheduledForDeletion)) {
-//            $this->objectPersister->deleteManyByIdentifiers($this->scheduledForDeletion);
-//            $this->scheduledForDeletion = [];
-//        }
+        if (count($this->scheduledForInsertion)) {
+            $this->indexManager->bulkInsert($this->scheduledForInsertion);
+            $this->scheduledForInsertion = [];
+        }
+        if (count($this->scheduledForUpdate)) {
+            $this->indexManager->bulkReplace($this->scheduledForUpdate);
+            $this->scheduledForUpdate = [];
+        }
+        if (count($this->scheduledForDeletion)) {
+            $this->indexManager->delete($this->scheduledForDeletion);
+            $this->scheduledForDeletion = [];
+        }
     }
-
-//
-//    private function scheduleForDeletion($object)
-//    {
-//        if ($identifierValue = $this->propertyAccessor->getValue($object, $this->config['identifier'])) {
-//            $this->scheduledForDeletion[] = !is_scalar($identifierValue) ? (string) $identifierValue : $identifierValue;
-//        }
-//    }
 }
