@@ -1,5 +1,7 @@
 {
     "name": "versh23/manticore-bundle",
+    "description": "Manticore PHP integration for your Symfony project using Manticore and Doctrine ORM",
+    "keywords": ["manticore", "doctrine", "orm", "search", "sphinx", "sphinxql"],
     "type": "symfony-bundle",
     "license": "MIT",
     "authors": [
