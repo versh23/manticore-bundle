@@ -27,7 +27,7 @@ class IndexConfigCommand extends Command
     {
         $this
             ->setDescription('Render config sample')
-            ->addArgument('index', InputArgument::REQUIRED, 'Index name need to config')
+            ->addArgument('index', InputArgument::OPTIONAL, 'Index name need to config')
         ;
     }
 
@@ -35,29 +35,29 @@ class IndexConfigCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        //TODO all indexes
         $indexName = $input->getArgument('index');
 
-        $indexManager = $this->registry->getIndexManager($indexName);
+        $indexManagers = $indexName ? [$this->registry->getIndexManager($indexName)] : $this->registry->getAllIndexManagers();
 
-        $index = $indexManager->getIndex();
+        foreach ($indexManagers as $indexManager) {
+            $index = $indexManager->getIndex();
 
-        $fieldItem = '';
-        foreach ($index->getFields() as $name => $field) {
-            $fieldItem = $fieldItem.PHP_EOL.<<<EOT
+            $fieldItem = '';
+            foreach ($index->getFields() as $name => $field) {
+                $fieldItem = $fieldItem.PHP_EOL.<<<EOT
             rt_field = $name
 EOT;
-        }
+            }
 
-        $articleItem = '';
+            $articleItem = '';
 
-        foreach ($index->getAttributes() as $name => $attribute) {
-            $articleItem = $articleItem.PHP_EOL.<<<EOT
+            foreach ($index->getAttributes() as $name => $attribute) {
+                $articleItem = $articleItem.PHP_EOL.<<<EOT
             rt_attr_{$attribute['type']} = $name
 EOT;
-        }
+            }
 
-        $configItem = <<<EOT
+            $configItem = <<<EOT
         index {$index->getName()} {
             # other settings
             
@@ -69,9 +69,10 @@ EOT;
         }
 EOT;
 
-        $io->newLine(5);
-        $io->writeln($configItem);
-        $io->newLine(5);
+            $io->newLine(5);
+            $io->writeln($configItem);
+            $io->newLine(5);
+        }
 
         return 0;
     }

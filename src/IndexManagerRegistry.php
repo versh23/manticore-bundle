@@ -12,8 +12,9 @@ class IndexManagerRegistry
     public function addIndexManager(IndexManager $manager)
     {
         $index = $manager->getIndex();
-        $this->indexMap[$index->getName()] = $manager;
-        $this->classMap[$index->getClass()][] = $index->getName();
+        $indexName = $index->getName();
+        $this->indexMap[$indexName] = $manager;
+        $this->classMap[$index->getClass()][] = $indexName;
     }
 
     public function getClassByIndex(string $index): string
@@ -34,5 +35,13 @@ class IndexManagerRegistry
         }
 
         return $this->indexMap[$index];
+    }
+
+    /**
+     * @return IndexManager[]
+     */
+    public function getAllIndexManagers(): array
+    {
+        return array_values($this->indexMap);
     }
 }

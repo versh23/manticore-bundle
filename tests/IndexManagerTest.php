@@ -4,18 +4,12 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Tests;
 
-use Doctrine\ORM\AbstractQuery;
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\Query\Expr;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\Persistence\ObjectManager;
 use Foolz\SphinxQL\Drivers\MultiResultSet;
 use Foolz\SphinxQL\Drivers\Pdo\Connection;
 use Foolz\SphinxQL\Drivers\ResultSet;
 use Foolz\SphinxQL\Drivers\ResultSetInterface;
 use Pagerfanta\Pagerfanta;
-use PHPUnit\Framework\TestCase;
 use Versh23\ManticoreBundle\Index;
 use Versh23\ManticoreBundle\IndexManager;
 use Versh23\ManticoreBundle\Tests\Entity\SimpleEntity;
@@ -39,27 +33,6 @@ class IndexManagerTest extends TestCase
         $connection->setParams(['host' => $_SERVER['MANTICORE_HOST']]);
 
         return $connection;
-    }
-
-    private function createManagerRegistry(array $result)
-    {
-        $managerRegistry = $this->createMock(ManagerRegistry::class);
-
-        $repository = $this->createMock(EntityRepository::class);
-
-        $builder = $this->createMock(QueryBuilder::class);
-        $builder->method('expr')->willReturn(new Expr());
-        $builder->method('andWhere')->willReturn($builder);
-        $query = $this->createMock(AbstractQuery::class);
-        $query->method('getResult')->willReturn($result);
-        $builder->method('getQuery')->willReturn($query);
-
-        $repository->method('createQueryBuilder')->willReturn($builder);
-        $objectManager = $this->createMock(ObjectManager::class);
-        $objectManager->method('getRepository')->willReturn($repository);
-        $managerRegistry->method('getManagerForClass')->willReturn($objectManager);
-
-        return $managerRegistry;
     }
 
     public function testInsert()

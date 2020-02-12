@@ -10,6 +10,7 @@ use Foolz\SphinxQL\Drivers\ConnectionInterface;
 use Foolz\SphinxQL\Drivers\ResultSetInterface;
 use Foolz\SphinxQL\Helper;
 use Foolz\SphinxQL\SphinxQL;
+use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Adapter\FixedAdapter;
 use Pagerfanta\Pagerfanta;
 use Symfony\Component\PropertyAccess\PropertyAccess;
@@ -84,6 +85,22 @@ class IndexManager
     public function getIndex(): Index
     {
         return $this->index;
+    }
+
+    public function createObjectPager(): Pagerfanta
+    {
+        $class = $this->index->getClass();
+
+        /** @var EntityRepository $repository */
+        $repository = $this->managerRegistry
+            ->getManagerForClass($class)
+            ->getRepository($class);
+
+        $queryBuilder = $repository->createQueryBuilder(IndexManager::ALIAS);
+
+        $adapter = new DoctrineORMAdapter($queryBuilder);
+
+        return new Pagerfanta($adapter);
     }
 
     private function getValue($object, string $property, string $type = Index::ATTR_TYPE_STRING)
@@ -287,14 +304,14 @@ class IndexManager
     {
         $resultData = $this->doFind($query, $page, $limit);
 
-        $pagerfanta = $this->createPagerfanta($resultData['items'], $resultData['total']);
-        $pagerfanta->setMaxPerPage($limit);
-        $pagerfanta->setCurrentPage($page);
+        $pager = $this->createPager($resultData['items'], $resultData['total']);
+        $pager->setMaxPerPage($limit);
+        $pager->setCurrentPage($page);
 
-        return $pagerfanta;
+        return $pager;
     }
 
-    private function createPagerfanta(array $items, int $total): Pagerfanta
+    private function createPager(array $items, int $total): Pagerfanta
     {
         $adapter = new FixedAdapter($total, $items);
 
