@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\DependencyInjection;
 
+use Doctrine\ORM\Events;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -51,14 +52,16 @@ class Versh23ManticoreExtension extends Extension
             $indexManagerDef->replaceArgument(0, new Reference($connectionId));
             $indexManagerDef->replaceArgument(1, new Reference($indexId));
             $indexManagerDef->addTag('manticore.index_manager');
+            $container->setDefinition($indexManagerId, $indexManagerDef);
 
             $listenerId = sprintf('manticore.listener.%s', $name);
             $listenerDef = new ChildDefinition('manticore.listener_prototype');
             $listenerDef->replaceArgument(0, new Reference($indexManagerId));
-
+            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postPersist]);
+            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postUpdate]);
+            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::preRemove]);
+            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postFlush]);
             $container->setDefinition($listenerId, $listenerDef);
-
-            $container->setDefinition($indexManagerId, $indexManagerDef);
         }
     }
 }

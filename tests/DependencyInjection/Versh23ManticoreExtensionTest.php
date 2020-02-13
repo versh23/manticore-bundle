@@ -24,6 +24,8 @@ class Versh23ManticoreExtensionTest extends TestCase
         $extension->load($config, $containerBuilder);
 
         $def = $containerBuilder->getDefinition('manticore.index_manager.simple_entity');
+        $prototypeDef = $containerBuilder->getDefinition('manticore.index_manager_prototype');
+        $this->assertSame('doctrine', (string) $prototypeDef->getArgument(2));
 
         $this->assertTrue($def->hasTag('manticore.index_manager'));
         $this->assertSame('manticore.index_manager_prototype', $def->getParent());
@@ -48,6 +50,13 @@ class Versh23ManticoreExtensionTest extends TestCase
 
         $listenerDef = $containerBuilder->getDefinition('manticore.listener.simple_entity');
         $this->assertSame('manticore.index_manager.simple_entity', (string) $listenerDef->getArgument(0));
+        $tag = $listenerDef->getTag('doctrine.orm.entity_listener');
+        $this->assertSame([
+            ['event' => 'postPersist'],
+            ['event' => 'postUpdate'],
+            ['event' => 'preRemove'],
+            ['event' => 'postFlush'],
+        ], $tag);
 
         $connectionDef = $containerBuilder->getDefinition('manticore.connection');
         $calls = $connectionDef->getMethodCalls();

@@ -29,11 +29,11 @@ services:
         arguments:
             -
             -
+            - '@doctrine'
+
     manticore.index_manager_registry:
         class: Versh23\ManticoreBundle\IndexManagerRegistry
-        arguments:
-            - []
-            - []
+
     Versh23\ManticoreBundle\IndexManagerRegistry:
         alias: manticore.index_manager_registry
 
@@ -42,8 +42,3 @@ services:
         abstract: true
         arguments:
             -
-        tags:
-            - { name: 'doctrine.orm.entity_listener', event: 'postPersist' }
-            - { name: 'doctrine.orm.entity_listener', event: 'postUpdate' }
-            - { name: 'doctrine.orm.entity_listener', event: 'preRemove' }
-            - { name: 'doctrine.orm.entity_listener', event: 'postFlush' }
