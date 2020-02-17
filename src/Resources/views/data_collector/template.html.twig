@@ -77,13 +77,7 @@
                 <tr>
                     <td class="nowrap">{{ loop.index }}</td>
                     <td class="nowrap">{{ '%0.2f'|format(item.time) }}&nbsp;ms</td>
-                    <td>
-                        <div>
-                            <pre>
-                                {{ item.query }}
-                            </pre>
-                        </div>
-                    </td>
+                    <td>{{ item.query }}</td>
                 </tr>
             {% endfor %}
             </tbody>
