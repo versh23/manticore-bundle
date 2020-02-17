@@ -8,9 +8,8 @@ use Doctrine\ORM\Events;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
-use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 
 class Versh23ManticoreExtension extends Extension
@@ -23,20 +22,17 @@ class Versh23ManticoreExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
-        $loader->load('services.yaml');
+        $loader = new XmlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+        $loader->load('services.xml');
 
-        //TODO only PDO ?
-        $connectionClass = \Foolz\SphinxQL\Drivers\Pdo\Connection::class;
         $connectionId = 'manticore.connection';
-        $connectionRef = new Definition($connectionClass);
+        $connectionRef = $container->getDefinition($connectionId);
         $connectionRef->addMethodCall('setParams', [
             [
                 'host' => $config['host'],
                 'port' => $config['port'],
             ],
         ]);
-        $container->setDefinition($connectionId, $connectionRef);
 
         foreach ($config['indexes'] as $name => $indexConfig) {
             $indexId = sprintf('manticore.index.%s', $name);
