@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Versh23\ManticoreBundle\IndexManager;
 
 class Versh23ManticoreExtension extends Extension
 {
@@ -49,6 +50,7 @@ class Versh23ManticoreExtension extends Extension
             $indexManagerDef->replaceArgument(1, new Reference($indexId));
             $indexManagerDef->addTag('manticore.index_manager');
             $container->setDefinition($indexManagerId, $indexManagerDef);
+            $container->registerAliasForArgument($indexManagerId, IndexManager::class, sprintf('%s.index_manager', $name));
 
             $listenerId = sprintf('manticore.listener.%s', $name);
             $listenerDef = new ChildDefinition('manticore.listener_prototype');
