@@ -6,10 +6,10 @@ namespace Versh23\ManticoreBundle\Tests;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Foolz\SphinxQL\Drivers\MultiResultSet;
-use Foolz\SphinxQL\Drivers\Pdo\Connection;
 use Foolz\SphinxQL\Drivers\ResultSet;
 use Foolz\SphinxQL\Drivers\ResultSetInterface;
 use Pagerfanta\Pagerfanta;
+use Versh23\ManticoreBundle\Connection;
 use Versh23\ManticoreBundle\Index;
 use Versh23\ManticoreBundle\IndexManager;
 use Versh23\ManticoreBundle\Tests\Entity\SimpleEntity;

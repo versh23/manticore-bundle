@@ -15,6 +15,15 @@ use Versh23\ManticoreBundle\IndexManager;
 
 class TestCase extends \PHPUnit\Framework\TestCase
 {
+    protected function getProtectedProperty($object, string $property)
+    {
+        $reflection = new \ReflectionClass($object);
+        $reflectionProperty = $reflection->getProperty($property);
+        $reflectionProperty->setAccessible(true);
+
+        return $reflectionProperty->getValue($object);
+    }
+
     protected function createManagerRegistry(array $result)
     {
         $managerRegistry = $this->createMock(ManagerRegistry::class);
