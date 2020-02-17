@@ -19,14 +19,18 @@ class Logger extends AbstractLogger
         $this->debug = $debug;
     }
 
-    public function logQuery(string $query): void
+    public function logQuery(string $query, float $time): void
     {
         if ($this->debug) {
-            $this->queries[] = $query;
+            $this->queries[] = [
+                'query' => $query,
+                'time' => $time,
+            ];
         }
 
         if ($this->logger) {
-            $this->logger->info($query);
+            $message = sprintf('%s %0.2f ms', $query, $time);
+            $this->logger->info($message);
         }
     }
 

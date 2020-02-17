@@ -18,17 +18,23 @@ class Connection extends \Foolz\SphinxQL\Drivers\Pdo\Connection
 
     public function query($query): ResultSetInterface
     {
-        $this->logger->logQuery($query);
+        $start = microtime(true);
+        $result = parent::query($query);
+        $time = microtime(true) - $start;
 
-        return parent::query($query);
+        $this->logger->logQuery($query, $time);
+
+        return $result;
     }
 
     public function multiQuery(array $queue): MultiResultSetInterface
     {
-        foreach ($queue as $query) {
-            $this->logger->logQuery($query);
-        }
+        $start = microtime(true);
+        $result = parent::multiQuery($queue);
+        $time = microtime(true) - $start;
 
-        return parent::multiQuery($queue);
+        $this->logger->logQuery(implode(';', $queue), $time);
+
+        return $result;
     }
 }

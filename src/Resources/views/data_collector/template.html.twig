@@ -34,6 +34,11 @@
     <span class="label {{ collector.queryCount ? '' : 'disabled' }}">
         <span class="icon">{{ include('@Versh23Manticore/data_collector/icon.svg') }}</span>
         <strong>Manticore</strong>
+        {% if collector.queryCount %}
+            <span class="count">
+                {{ collector.queryCount }}
+            </span>
+        {% endif %}
     </span>
 {% endblock %}
 
@@ -43,7 +48,7 @@
     <div class="metrics">
         <div class="metric">
             <span class="value">{{ collector.queryCount }}</span>
-            <span class="label">Database Queries</span>
+            <span class="label">Manticore Queries</span>
         </div>
         <div class="metric">
             <span class="value">{{ '%0.2f'|format(collector.time) }} <span class="unit">ms</span></span>
@@ -61,21 +66,21 @@
 
         <table class="alt queries-table">
             <thead>
-            <tr>
-                <th class="nowrap">#</th>
-                <th class="nowrap">Query Time<span></span></th>
-                <th style="width: 100%">Info</th>
-            </tr>
+                <tr>
+                    <th class="nowrap">#</th>
+                    <th class="nowrap">Query Time<span></span></th>
+                    <th class="full-width">Query Text</th>
+                </tr>
             </thead>
-            <tbody id="queries">
-            {% for query in collector.queries %}
+            <tbody>
+            {% for item in collector.queries %}
                 <tr>
                     <td class="nowrap">{{ loop.index }}</td>
-                    <td class="nowrap">{{ '%0.2f'|format(query.time|default(0)) }}&nbsp;ms</td>
+                    <td class="nowrap">{{ '%0.2f'|format(item.time) }}&nbsp;ms</td>
                     <td>
                         <div>
                             <pre>
-                                {{ query }}
+                                {{ item.query }}
                             </pre>
                         </div>
                     </td>
