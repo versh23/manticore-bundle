@@ -50,7 +50,7 @@ class Versh23ManticoreExtensionTest extends TestCase
 
         $listenerDef = $containerBuilder->getDefinition('manticore.listener.simple_entity');
         $this->assertSame('manticore.index_manager.simple_entity', (string) $listenerDef->getArgument(0));
-        $tag = $listenerDef->getTag('doctrine.orm.entity_listener');
+        $tag = $listenerDef->getTag('doctrine.event_listener');
         $this->assertSame([
             ['event' => 'postPersist'],
             ['event' => 'postUpdate'],
