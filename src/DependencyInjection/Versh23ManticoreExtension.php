@@ -55,10 +55,10 @@ class Versh23ManticoreExtension extends Extension
             $listenerId = sprintf('manticore.listener.%s', $name);
             $listenerDef = new ChildDefinition('manticore.listener_prototype');
             $listenerDef->replaceArgument(0, new Reference($indexManagerId));
-            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postPersist]);
-            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postUpdate]);
-            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::preRemove]);
-            $listenerDef->addTag('doctrine.orm.entity_listener', ['event' => Events::postFlush]);
+            $listenerDef->addTag('doctrine.event_listener', ['event' => Events::postPersist]);
+            $listenerDef->addTag('doctrine.event_listener', ['event' => Events::postUpdate]);
+            $listenerDef->addTag('doctrine.event_listener', ['event' => Events::preRemove]);
+            $listenerDef->addTag('doctrine.event_listener', ['event' => Events::postFlush]);
             $container->setDefinition($listenerId, $listenerDef);
         }
     }
