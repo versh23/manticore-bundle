@@ -1,0 +1,87 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{% block toolbar %}
+    {% set icon %}
+        {{ include('@Versh23Manticore/data_collector/icon.svg') }}
+        <span class="sf-toolbar-value">{{ collector.queryCount }}</span>
+
+        {% if collector.queryCount > 0 %}
+            <span class="sf-toolbar-info-piece-additional-detail">
+                    <span class="sf-toolbar-label">in</span>
+                    <span class="sf-toolbar-value">{{ '%0.2f'|format(collector.time) }}</span>
+                    <span class="sf-toolbar-label">ms</span>
+                </span>
+        {% endif %}
+
+    {% endset %}
+
+    {% set text %}
+        <div class="sf-toolbar-info-piece">
+            <b>Queries</b>
+            <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
+        </div>
+
+        <div class="sf-toolbar-info-piece">
+            <b>Query Time</b>
+            <span>{{ '%0.2f'|format(collector.time) }} ms</span>
+        </div>
+    {% endset %}
+
+    {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', { link: true }) }}
+{% endblock %}
+
+{% block menu %}
+    <span class="label {{ collector.queryCount ? '' : 'disabled' }}">
+        <span class="icon">{{ include('@Versh23Manticore/data_collector/icon.svg') }}</span>
+        <strong>Manticore</strong>
+        {% if collector.queryCount %}
+            <span class="count">
+                {{ collector.queryCount }}
+            </span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block panel %}
+    <h2>Query Metrics</h2>
+
+    <div class="metrics">
+        <div class="metric">
+            <span class="value">{{ collector.queryCount }}</span>
+            <span class="label">Manticore Queries</span>
+        </div>
+        <div class="metric">
+            <span class="value">{{ '%0.2f'|format(collector.time) }} <span class="unit">ms</span></span>
+            <span class="label">Query Time</span>
+        </div>
+    </div>
+
+    <h2>Queries</h2>
+
+    {% if not collector.queryCount %}
+        <div class="empty">
+            <p>No queries were performed.</p>
+        </div>
+    {% else %}
+
+        <table class="alt queries-table">
+            <thead>
+                <tr>
+                    <th class="nowrap">#</th>
+                    <th class="nowrap">Query Time<span></span></th>
+                    <th class="full-width">Query Text</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in collector.queries %}
+                <tr>
+                    <td class="nowrap">{{ loop.index }}</td>
+                    <td class="nowrap">{{ '%0.2f'|format(item.time) }}&nbsp;ms</td>
+                    <td>{{ item.query }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+    {% endif %}
+{% endblock %}

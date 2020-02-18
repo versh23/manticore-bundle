@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services
+        https://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <defaults public="false"/>
+
+        <service id="manticore.logger" class="Versh23\ManticoreBundle\Logger">
+            <argument type="service" id="logger" on-invalid="null"/>
+            <argument type="string">%kernel.debug%</argument>
+            <tag name="monolog.logger" channel="manticore"/>
+        </service>
+
+        <service id="manticore.connection" class="Versh23\ManticoreBundle\Connection">
+            <argument type="service" id="manticore.logger"/>
+        </service>
+
+        <service id="manticore.command.populate" class="Versh23\ManticoreBundle\Command\PopulateCommand">
+            <argument type="service" id="manticore.index_manager_registry"/>
+            <argument type="service" id="doctrine"/>
+            <tag name="console.command"/>
+        </service>
+
+        <service id="manticore.command.config" class="Versh23\ManticoreBundle\Command\IndexConfigCommand">
+            <argument type="service" id="manticore.index_manager_registry"/>
+            <tag name="console.command"/>
+        </service>
+
+        <service id="manticore.index_prototype" class="Versh23\ManticoreBundle\Index" abstract="true">
+            <argument type="string"/><!-- name -->
+            <argument type="string"/><!-- class -->
+            <argument type="collection"/><!-- fields -->
+            <argument type="collection"/><!-- attributes -->
+        </service>
+
+        <service id="manticore.index_manager_prototype" class="Versh23\ManticoreBundle\IndexManager" abstract="true">
+            <argument type="service" id="manticore.connection"/>
+            <argument/><!-- index -->
+            <argument type="service" id="doctrine"/>
+        </service>
+
+        <service id="manticore.index_manager_registry" class="Versh23\ManticoreBundle\IndexManagerRegistry"/>
+        <service id="Versh23\ManticoreBundle\IndexManagerRegistry" alias="manticore.index_manager_registry"/>
+
+        <service id="manticore.listener_prototype" class="Versh23\ManticoreBundle\Listener" abstract="true">
+            <argument/><!-- index manager -->
+        </service>
+
+        <service id="Versh23\ManticoreBundle\ManticoreDataCollector">
+            <argument type="service" id="manticore.logger"/>
+            <tag name="data_collector" template="@Versh23Manticore/data_collector/template.html.twig" id="manticore.data_collector"/>
+        </service>
+
+    </services>
+</container>

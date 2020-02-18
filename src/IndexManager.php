@@ -6,7 +6,6 @@ namespace Versh23\ManticoreBundle;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
-use Foolz\SphinxQL\Drivers\ConnectionInterface;
 use Foolz\SphinxQL\Drivers\ResultSetInterface;
 use Foolz\SphinxQL\Helper;
 use Foolz\SphinxQL\SphinxQL;
@@ -27,7 +26,7 @@ class IndexManager
     private $propertyAccessor = null;
     private $managerRegistry;
 
-    public function __construct(ConnectionInterface $connection, Index $index, ManagerRegistry $managerRegistry)
+    public function __construct(Connection $connection, Index $index, ManagerRegistry $managerRegistry)
     {
         $this->connection = $connection;
         $this->index = $index;

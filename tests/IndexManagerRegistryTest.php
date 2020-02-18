@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Versh23\ManticoreBundle\Tests;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-use Foolz\SphinxQL\Drivers\ConnectionInterface;
 use PHPUnit\Framework\TestCase;
+use Versh23\ManticoreBundle\Connection;
 use Versh23\ManticoreBundle\Index;
 use Versh23\ManticoreBundle\IndexManager;
 use Versh23\ManticoreBundle\IndexManagerRegistry;
@@ -18,7 +18,7 @@ class IndexManagerRegistryTest extends TestCase
     public function testIndexManager()
     {
         $registry = new IndexManagerRegistry();
-        $connection = $this->createMock(ConnectionInterface::class);
+        $connection = $this->createMock(Connection::class);
         $managerRegistry = $this->createMock(ManagerRegistry::class);
         $index = new Index('test_index', SimpleEntity::class, [
             'name' => ['property' => 'name'],
