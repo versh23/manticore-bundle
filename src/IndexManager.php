@@ -128,7 +128,7 @@ class IndexManager
 
                 return (string) $value;
             case Index::ATTR_TYPE_MVA:
-                throw new ManticoreException('Not implemented yet');
+                return (array) $value;
             case Index::ATTR_TYPE_STRING:
             default:
                 return (string) $value;

@@ -6,8 +6,8 @@ namespace Versh23\ManticoreBundle;
 
 class IndexManagerRegistry
 {
-    private $indexMap;
-    private $classMap;
+    private $indexMap = [];
+    private $classMap = [];
 
     public function addIndexManager(IndexManager $manager)
     {
