@@ -20,6 +20,10 @@ class IndexManager
     public const ALIAS = 'o';
     private const IDENTIFIER = 'id';
 
+    private const ACTION_INSERT = 'insert';
+    private const ACTION_UPDATE = 'update';
+    private const ACTION_REPLACE = 'replace';
+
     private $connection;
     private $index;
 
@@ -50,19 +54,24 @@ class IndexManager
 
     public function replace($object): ResultSetInterface
     {
-        return $this->createInsertReplaceQuery($object, false)->execute();
+        return $this->createCRUDQuery($object, self::ACTION_REPLACE)->execute();
     }
 
-    private function createInsertReplaceQuery($object, bool $insert = true, ?SphinxQL $sphinxQL = null): SphinxQL
+    private function createCRUDQuery($object, string $action, ?SphinxQL $sphinxQL = null): SphinxQL
     {
         $index = $this->getIndex();
 
-        $columns = [self::IDENTIFIER];
-        $values = [$this->getIdentityValue($object)];
+        $columns = [];
+        $values = [];
 
-        foreach ($index->getFields() as $name => $field) {
-            $columns[] = $name;
-            $values[] = $this->getValue($object, $field['property'], Index::ATTR_TYPE_STRING);
+        if (self::ACTION_UPDATE !== $action) {
+            $columns = [self::IDENTIFIER];
+            $values = [$this->getIdentityValue($object)];
+
+            foreach ($index->getFields() as $name => $field) {
+                $columns[] = $name;
+                $values[] = $this->getValue($object, $field['property'], Index::ATTR_TYPE_STRING);
+            }
         }
 
         foreach ($index->getAttributes() as $name => $attribute) {
@@ -70,13 +79,40 @@ class IndexManager
             $values[] = $this->getValue($object, $attribute['property'], $attribute['type']);
         }
 
-        if (!$sphinxQL) {
-            $sphinxQL = $this->createQuery();
-            $sphinxQL = $insert ? $sphinxQL->insert()->into($index->getName()) : $sphinxQL->replace()->into($index->getName());
+        $prevQL = null;
+
+        if (self::ACTION_UPDATE === $action && null !== $sphinxQL) {
+            $prevQL = (clone $sphinxQL)->compile()->getCompiled();
         }
 
-        $sphinxQL->columns($columns);
-        $sphinxQL->values($values);
+        if (!$sphinxQL) {
+            $sphinxQL = $this->createQuery();
+
+            switch ($action) {
+                case self::ACTION_INSERT:
+                    $sphinxQL = $sphinxQL->insert()->into($index->getName());
+                    break;
+                case self::ACTION_REPLACE:
+                    $sphinxQL = $sphinxQL->replace()->into($index->getName());
+                    break;
+                case self::ACTION_UPDATE:
+                    $sphinxQL = $sphinxQL->update($index->getName());
+                    break;
+            }
+        }
+
+        $sphinxQL->set(array_combine($columns, $values));
+
+        if (self::ACTION_UPDATE === $action) {
+            $sphinxQL
+                ->resetWhere()
+                ->where(self::IDENTIFIER, '=', $this->getIdentityValue($object));
+
+            if (null !== $prevQL) {
+                $currentQL = $sphinxQL->compile()->getCompiled();
+                $sphinxQL->query($prevQL.';'.$currentQL);
+            }
+        }
 
         return $sphinxQL;
     }
@@ -160,6 +196,16 @@ class IndexManager
 
     public function bulkReplace(array $objects): ?ResultSetInterface
     {
+        return $this->bulkAction($objects, self::ACTION_REPLACE);
+    }
+
+    public function bulkUpdate(array $objects): ?ResultSetInterface
+    {
+        return $this->bulkAction($objects, self::ACTION_UPDATE);
+    }
+
+    private function bulkAction(array $objects, string $action): ?ResultSetInterface
+    {
         if (!count($objects)) {
             return null;
         }
@@ -167,7 +213,7 @@ class IndexManager
         $sq = null;
 
         foreach ($objects as $object) {
-            $sq = $this->createInsertReplaceQuery($object, false, $sq);
+            $sq = $this->createCRUDQuery($object, $action, $sq);
         }
 
         return $sq->execute();
@@ -175,30 +221,17 @@ class IndexManager
 
     public function bulkInsert(array $objects): ?ResultSetInterface
     {
-        if (!count($objects)) {
-            return null;
-        }
-
-        $sq = null;
-
-        foreach ($objects as $object) {
-            $sq = $this->createInsertReplaceQuery($object, true, $sq);
-        }
-
-        return $sq->execute();
+        return $this->bulkAction($objects, self::ACTION_INSERT);
     }
 
     public function insert($object): ResultSetInterface
     {
-        return $this->createInsertReplaceQuery($object, true)->execute();
+        return $this->createCRUDQuery($object, self::ACTION_INSERT)->execute();
     }
 
-    public function update($object): void
+    public function update($object): ResultSetInterface
     {
-        //TODO check update field
-        //All attributes types (int, bigint, float, strings, MVA, JSON) can be dynamically updated.
-
-        throw new ManticoreException('Not implemented yet');
+        return $this->createCRUDQuery($object, self::ACTION_UPDATE)->execute();
     }
 
     public function find($query = '', int $page = 1, int $limit = 10): array

@@ -73,6 +73,26 @@ class IndexManagerTest extends TestCase
         $indexManager->replace($entity);
     }
 
+    public function testUpdate()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $connection
+            ->expects($this->once())
+            ->method('query')
+            ->with('UPDATE test_index SET status = \'enabled\' WHERE id = 1')
+            ->willReturn($this->createMock(ResultSet::class));
+
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+        $indexManager->update($entity);
+    }
+
     public function testDelete()
     {
         $index = $this->createIndex();
@@ -134,6 +154,29 @@ class IndexManagerTest extends TestCase
         $managerRegistry = $this->createMock(ManagerRegistry::class);
         $indexManager = new IndexManager($connection, $index, $managerRegistry);
         $indexManager->bulkInsert([$entity, $entity2]);
+    }
+
+    public function testBulkUpdate()
+    {
+        $entity = new SimpleEntity();
+        $entity->setId(1)->setStatus('enabled')->setName('name1');
+
+        $entity2 = new SimpleEntity();
+        $entity2->setId(2)->setStatus('disabled')->setName('name2');
+
+        $index = $this->createIndex();
+
+        $connection = $this->createConnection();
+
+        $connection
+            ->expects($this->once())
+            ->method('query')
+            ->with('UPDATE test_index SET status = \'enabled\' WHERE id = 1;UPDATE test_index SET status = \'disabled\' WHERE id = 2')
+            ->willReturn($this->createMock(ResultSet::class));
+
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $indexManager = new IndexManager($connection, $index, $managerRegistry);
+        $indexManager->bulkUpdate([$entity, $entity2]);
     }
 
     public function testFind()
