@@ -1,7 +1,7 @@
 {
     "name": "versh23/manticore-bundle",
     "description": "Manticore PHP integration for your Symfony project using Manticore and Doctrine ORM",
-    "keywords": ["manticore", "doctrine", "orm", "search", "sphinx", "sphinxql"],
+    "keywords": ["manticore", "doctrine", "orm", "search", "sphinx"],
     "type": "symfony-bundle",
     "license": "MIT",
     "authors": [
@@ -11,9 +11,8 @@
         }
     ],
     "require": {
-        "php": "^7.1",
+        "php": "^7.2.5",
         "symfony/property-access": "^4.4|^5.0",
-        "foolz/sphinxql-query-builder": "^2.1",
         "symfony/console": "^4.4|^5.0",
         "pagerfanta/pagerfanta": "^2.1",
         "doctrine/orm": "^2.7",
@@ -21,7 +20,10 @@
         "symfony/dependency-injection": "^4.4|^5.0",
         "symfony/http-kernel": "^4.4|^5.0",
         "doctrine/doctrine-bundle": "^2.0",
-        "psr/log": "^1.1"
+        "psr/log": "^1.1",
+        "manticoresoftware/manticoresearch-php": "^1.4",
+        "pagerfanta/doctrine-orm-adapter": "^2.4",
+        "ext-json": "*"
     },
     "autoload": {
         "psr-4": { "Versh23\\ManticoreBundle\\": "src/" }

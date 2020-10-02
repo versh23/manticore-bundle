@@ -7,25 +7,12 @@ namespace Versh23\ManticoreBundle;
 class IndexManagerRegistry
 {
     private $indexMap = [];
-    private $classMap = [];
 
     public function addIndexManager(IndexManager $manager)
     {
         $index = $manager->getIndex();
         $indexName = $index->getName();
         $this->indexMap[$indexName] = $manager;
-        $this->classMap[$index->getClass()][] = $indexName;
-    }
-
-    public function getClassByIndex(string $index): string
-    {
-        foreach ($this->classMap as $class => $indexes) {
-            if (false !== array_search($index, $indexes)) {
-                return $class;
-            }
-        }
-
-        throw new ManticoreException('no class found by index '.$index);
     }
 
     public function getIndexManager(string $index): IndexManager
@@ -35,26 +22,6 @@ class IndexManagerRegistry
         }
 
         return $this->indexMap[$index];
-    }
-
-    /**
-     * @return IndexManager[]
-     */
-    public function getIndexManagerByClass(string $class): array
-    {
-        if (!isset($this->classMap[$class])) {
-            throw new ManticoreException('no indexManager found by class '.$class);
-        }
-
-        $indexes = $this->classMap[$class];
-
-        $managers = [];
-
-        foreach ($indexes as $index) {
-            $managers[] = $this->getIndexManager($index);
-        }
-
-        return $managers;
     }
 
     /**

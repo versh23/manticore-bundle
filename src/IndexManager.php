@@ -4,117 +4,39 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityRepository;
-use Foolz\SphinxQL\Drivers\ResultSetInterface;
-use Foolz\SphinxQL\Helper;
-use Foolz\SphinxQL\SphinxQL;
-use Pagerfanta\Adapter\DoctrineORMAdapter;
+use Manticoresearch\Client;
+use Manticoresearch\ResultSet;
 use Pagerfanta\Adapter\FixedAdapter;
+use Pagerfanta\Doctrine\ORM\QueryAdapter;
 use Pagerfanta\Pagerfanta;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
+// TODO add alter index
+// TODO implement update index attributes
 class IndexManager
 {
-    public const ALIAS = 'o';
+    private const ALIAS = 'o';
     private const IDENTIFIER = 'id';
 
-    private const ACTION_INSERT = 'insert';
-    private const ACTION_UPDATE = 'update';
-    private const ACTION_REPLACE = 'replace';
-
-    private $connection;
     private $index;
 
     private $propertyAccessor = null;
     private $managerRegistry;
+    private $client;
 
-    public function __construct(Connection $connection, Index $index, ManagerRegistry $managerRegistry)
+    public function __construct(Client $client, Index $index, Registry $managerRegistry)
     {
-        $this->connection = $connection;
         $this->index = $index;
         $this->managerRegistry = $managerRegistry;
+        $this->client = $client;
     }
 
-    public function truncateIndex(): ResultSetInterface
+    public function isIndexable($object): bool
     {
-        return $this->createHelper()->truncateRtIndex($this->getIndex()->getName())->execute();
-    }
-
-    public function createHelper(): Helper
-    {
-        return new Helper($this->connection);
-    }
-
-    public function flushIndex(): ResultSetInterface
-    {
-        return $this->createHelper()->flushRtIndex($this->getIndex()->getName())->execute();
-    }
-
-    public function replace($object): ResultSetInterface
-    {
-        return $this->createCRUDQuery($object, self::ACTION_REPLACE)->execute();
-    }
-
-    private function createCRUDQuery($object, string $action, ?SphinxQL $sphinxQL = null): SphinxQL
-    {
-        $index = $this->getIndex();
-
-        $columns = [];
-        $values = [];
-
-        if (self::ACTION_UPDATE !== $action) {
-            $columns = [self::IDENTIFIER];
-            $values = [$this->getIdentityValue($object)];
-
-            foreach ($index->getFields() as $name => $field) {
-                $columns[] = $name;
-                $values[] = $this->getValue($object, $field['property'], Index::ATTR_TYPE_STRING);
-            }
-        }
-
-        foreach ($index->getAttributes() as $name => $attribute) {
-            $columns[] = $name;
-            $values[] = $this->getValue($object, $attribute['property'], $attribute['type']);
-        }
-
-        $prevQL = null;
-
-        if (self::ACTION_UPDATE === $action && null !== $sphinxQL) {
-            $prevQL = (clone $sphinxQL)->compile()->getCompiled();
-        }
-
-        if (!$sphinxQL) {
-            $sphinxQL = $this->createQuery();
-
-            switch ($action) {
-                case self::ACTION_INSERT:
-                    $sphinxQL = $sphinxQL->insert()->into($index->getName());
-                    break;
-                case self::ACTION_REPLACE:
-                    $sphinxQL = $sphinxQL->replace()->into($index->getName());
-                    break;
-                case self::ACTION_UPDATE:
-                    $sphinxQL = $sphinxQL->update($index->getName());
-                    break;
-            }
-        }
-
-        $sphinxQL->set(array_combine($columns, $values));
-
-        if (self::ACTION_UPDATE === $action) {
-            $sphinxQL
-                ->resetWhere()
-                ->where(self::IDENTIFIER, '=', $this->getIdentityValue($object));
-
-            if (null !== $prevQL) {
-                $currentQL = $sphinxQL->compile()->getCompiled();
-                $sphinxQL->query($prevQL.';'.$currentQL);
-            }
-        }
-
-        return $sphinxQL;
+        return get_class($object) === $this->getIndex()->getClass();
     }
 
     public function getIndex(): Index
@@ -122,50 +44,111 @@ class IndexManager
         return $this->index;
     }
 
-    public function createObjectPager(): Pagerfanta
+    public function createIndex(bool $recreate = false): void
     {
-        $class = $this->index->getClass();
+        $index = $this->createManticoreIndex();
 
-        /** @var EntityRepository $repository */
-        $repository = $this->managerRegistry
-            ->getManagerForClass($class)
-            ->getRepository($class);
+        if ($recreate) {
+            $index->drop(true);
+        }
 
-        $queryBuilder = $repository->createQueryBuilder(IndexManager::ALIAS);
+        $fields = [];
+        foreach ($this->index->getFields() as $fieldName => $field) {
+            $fields[$fieldName] = [
+                'type' => $field['type'],
+                'options' => $field['options'],
+            ];
+        }
+        $settings = $this->index->getOptions();
 
-        $adapter = new DoctrineORMAdapter($queryBuilder);
-
-        return new Pagerfanta($adapter);
+        $index->create($fields, $settings);
     }
 
-    private function getValue($object, string $property, string $type = Index::ATTR_TYPE_STRING)
+    private function createManticoreIndex(): \Manticoresearch\Index
+    {
+        return $this->client->index($this->index->getName());
+    }
+
+    public function truncateIndex(): void
+    {
+        $this->createManticoreIndex()->truncate();
+    }
+
+    public function flush(): void
+    {
+        $this->createManticoreIndex()->flush();
+    }
+
+    public function delete($ids): void
+    {
+        if (!is_array($ids)) {
+            $ids = [$ids];
+        }
+
+        if (!count($ids)) {
+            return;
+        }
+
+        $index = $this->createManticoreIndex();
+        foreach ($ids as $id) {
+            $index->deleteDocument($id);
+        }
+    }
+
+    public function bulkReplace(array $objects): void
+    {
+        $index = $this->createManticoreIndex();
+        $documents = [];
+
+        foreach ($objects as $object) {
+            $documents[] = $this->createDocument($object);
+        }
+
+        $index->replaceDocuments($documents);
+    }
+
+    private function createDocument($object): array
+    {
+        $document = [];
+        foreach ($this->index->getFields() as $name => $field) {
+            $document[$name] = $this->getValue($object, $field['property'], $field['type']);
+        }
+        $document['id'] = $this->getIdentityValue($object);
+
+        return $document;
+    }
+
+    // TODO object instead array
+
+    private function getValue($object, string $property, string $type = Index::TYPE_TEXT)
     {
         $propertyAccessor = $this->getPropertyAccessor();
         $value = $propertyAccessor->getValue($object, $property);
 
         switch ($type) {
-            case Index::ATTR_TYPE_FLOAT:
+            case Index::TYPE_FLOAT:
                 return (float) $value;
-            case Index::ATTR_TYPE_BOOL:
+            case Index::TYPE_BOOL:
                 return (bool) $value;
-            case Index::ATTR_TYPE_INT:
-            case Index::ATTR_TYPE_BIGINT:
+            case Index::TYPE_INTEGER:
                 return (int) $value;
-            case Index::ATTR_TYPE_TIMESTAMP:
+            case Index::TYPE_TIMESTAMP:
                 if ($value instanceof \DateTimeInterface) {
                     $value = $value->getTimestamp();
                 }
 
                 return (int) $value;
-            case Index::ATTR_TYPE_JSON:
+            case Index::TYPE_JSON:
                 if (is_array($value)) {
                     $value = json_encode($value);
                 }
 
                 return (string) $value;
-            case Index::ATTR_TYPE_MVA:
+            case Index::TYPE_MULTI:
+            case Index::TYPE_MULTI64:
                 return (array) $value;
-            case Index::ATTR_TYPE_STRING:
+            case Index::TYPE_TEXT:
+            case Index::TYPE_STRING:
             default:
                 return (string) $value;
         }
@@ -180,155 +163,74 @@ class IndexManager
         return $this->propertyAccessor;
     }
 
-    public function delete(array $ids): ?ResultSetInterface
+    public function getIdentityValue($object)
     {
-        if (!count($ids)) {
-            return null;
-        }
-
-        $sq = $this->createQuery()
-            ->delete()
-            ->from($this->getIndex()->getName())
-            ->where('id', 'in', $ids);
-
-        return $sq->execute();
+        // TODO custom identity field
+        return $this->getPropertyAccessor()->getValue($object, self::IDENTIFIER);
     }
 
-    public function bulkReplace(array $objects): ?ResultSetInterface
+    public function replace($object): void
     {
-        return $this->bulkAction($objects, self::ACTION_REPLACE);
+        $index = $this->createManticoreIndex();
+        $document = $this->createDocument($object);
+        $id = $document['id'];
+        unset($document['id']);
+
+        $index->replaceDocument($document, $id);
     }
 
-    public function bulkUpdate(array $objects): ?ResultSetInterface
+    public function insert($object): void
     {
-        return $this->bulkAction($objects, self::ACTION_UPDATE);
+        $index = $this->createManticoreIndex();
+        $document = $this->createDocument($object);
+        $id = $document['id'];
+        unset($document['id']);
+
+        $index->addDocument($document, $id);
     }
 
-    private function bulkAction(array $objects, string $action): ?ResultSetInterface
+    public function bulkInsert(array $objects): void
     {
-        if (!count($objects)) {
-            return null;
-        }
-
-        $sq = null;
+        $index = $this->createManticoreIndex();
+        $documents = [];
 
         foreach ($objects as $object) {
-            $sq = $this->createCRUDQuery($object, $action, $sq);
+            $documents[] = $this->createDocument($object);
         }
 
-        return $sq->execute();
-    }
-
-    public function bulkInsert(array $objects): ?ResultSetInterface
-    {
-        return $this->bulkAction($objects, self::ACTION_INSERT);
-    }
-
-    public function insert($object): ResultSetInterface
-    {
-        return $this->createCRUDQuery($object, self::ACTION_INSERT)->execute();
-    }
-
-    public function update($object): ResultSetInterface
-    {
-        return $this->createCRUDQuery($object, self::ACTION_UPDATE)->execute();
+        $index->addDocuments($documents);
     }
 
     public function find($query = '', int $page = 1, int $limit = 10): array
     {
-        $resultData = $this->doFind($query, $page, $limit);
-
-        return $resultData['items'];
-    }
-
-    private function getIdsResults(SphinxQL $query): array
-    {
-        $result = $query
-            ->enqueue($this->createHelper()->showMeta())
-            ->executeBatch();
-
-        $rawItems = $result->getNext()->fetchAllAssoc();
-
-        $ids = [];
-        foreach ($rawItems as $item) {
-            $ids[] = (int) $item['id'];
-        }
-
-        $meta = $result->getNext()->fetchAllAssoc();
-
-        return [$ids, $this->parseTotal($meta)];
-    }
-
-    private function doFind($query = '', int $page = 1, int $limit = 10): array
-    {
-        $resultData['total'] = 0;
-        $resultData['items'] = [];
-
-        $page = max($page, 1);
-        $offset = ($page - 1) * $limit;
-
-        if (!$query instanceof SphinxQL) {
-            $baseQuery = $this->createBaseQuery();
-
-            if (is_string($query) && '' !== $query) {
-                $baseQuery->match($this->getIndex()->getFieldsName(), $query);
-            }
-        } else {
-            $baseQuery = $query;
-        }
-
-        $baseQuery->limit($offset, $limit);
-
-        [$ids, $total] = $this->getIdsResults($baseQuery);
-
         $items = [];
+        $ids = [];
 
-        if (count($ids) > 0) {
+        $result = $this->doFind($query, $page, $limit);
+
+        foreach ($result as $item) {
+            $ids[] = $item->getId();
+        }
+
+        if (\count($ids) > 0) {
             $items = $this->hydrateItems($ids);
             $this->sort($ids, $items);
         }
 
-        $resultData['items'] = $items;
-        $resultData['total'] = $total;
-
-        return $resultData;
+        return $items;
     }
 
-    private function createBaseQuery(): SphinxQL
+    private function doFind($query = '', int $page = 1, int $limit = 10): ResultSet
     {
-        return $this->createQuery()
-            ->select('id', 'WEIGHT() as w')
-            ->from($this->getIndex()->getName())
-            ->orderBy('w', 'DESC');
-    }
+        $index = $this->createManticoreIndex();
+        $page = max($page, 1);
+        $offset = ($page - 1) * $limit;
 
-    public function createQuery(): SphinxQL
-    {
-        return new SphinxQL($this->connection);
-    }
-
-    private function parseTotal(array $meta): int
-    {
-        $total = 0;
-
-        foreach ($meta as $item) {
-            if ('total_found' === $item['Variable_name']) {
-                $total = (int) $item['Value'];
-                break;
-            }
-        }
-
-        return $total;
-    }
-
-    private function getRepository(): EntityRepository
-    {
-        /** @var EntityRepository $repository */
-        $repository = $this->managerRegistry
-            ->getManagerForClass($this->getIndex()->getClass())
-            ->getRepository($this->getIndex()->getClass());
-
-        return $repository;
+        return $index
+            ->search($query)
+            ->limit($limit)
+            ->offset($offset)
+            ->get();
     }
 
     private function hydrateItems(array $ids): array
@@ -343,6 +245,16 @@ class IndexManager
             ->setParameter('values', $ids);
 
         return $builder->getQuery()->getResult();
+    }
+
+    private function getRepository(): EntityRepository
+    {
+        /** @var EntityRepository $repository */
+        $repository = $this->managerRegistry
+            ->getManagerForClass($this->getIndex()->getClass())
+            ->getRepository($this->getIndex()->getClass());
+
+        return $repository;
     }
 
     private function sort(array $ids, array &$items)
@@ -361,9 +273,22 @@ class IndexManager
 
     public function findPaginated($query = '', int $page = 1, int $limit = 10): Pagerfanta
     {
-        $resultData = $this->doFind($query, $page, $limit);
+        $items = [];
+        $ids = [];
 
-        $pager = $this->createPager($resultData['items'], $resultData['total']);
+        $result = $this->doFind($query, $page, $limit);
+        $total = $result->getTotal();
+
+        foreach ($result as $item) {
+            $ids[] = $item->getId();
+        }
+
+        if (\count($ids) > 0) {
+            $items = $this->hydrateItems($ids);
+            $this->sort($ids, $items);
+        }
+
+        $pager = $this->createPager($items, $total);
         $pager->setMaxPerPage($limit);
         $pager->setCurrentPage($page);
 
@@ -377,13 +302,19 @@ class IndexManager
         return new Pagerfanta($adapter);
     }
 
-    public function getIdentityValue($object)
+    public function createObjectPager(): Pagerfanta
     {
-        return (int) $this->getPropertyAccessor()->getValue($object, self::IDENTIFIER);
-    }
+        $class = $this->index->getClass();
 
-    public function isIndexable($object): bool
-    {
-        return get_class($object) === $this->getIndex()->getClass();
+        /** @var EntityRepository $repository */
+        $repository = $this->managerRegistry
+            ->getManagerForClass($class)
+            ->getRepository($class);
+
+        $queryBuilder = $repository->createQueryBuilder(IndexManager::ALIAS);
+
+        $adapter = new QueryAdapter($queryBuilder);
+
+        return new Pagerfanta($adapter);
     }
 }

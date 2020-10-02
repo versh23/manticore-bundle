@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Command;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Registry;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,13 +20,14 @@ class PopulateCommand extends Command
     private $indexManagerRegistry;
     private $managerRegistry;
 
-    public function __construct(IndexManagerRegistry $indexManagerRegistry, ManagerRegistry $managerRegistry)
+    public function __construct(IndexManagerRegistry $indexManagerRegistry, Registry $managerRegistry)
     {
         parent::__construct();
         $this->indexManagerRegistry = $indexManagerRegistry;
         $this->managerRegistry = $managerRegistry;
     }
 
+    // TODO add recreate index option
     protected function configure()
     {
         $this
@@ -47,8 +48,8 @@ class PopulateCommand extends Command
         $indexManagers = $indexName ? [$this->indexManagerRegistry->getIndexManager($indexName)] : $this->indexManagerRegistry->getAllIndexManagers();
 
         foreach ($indexManagers as $indexManager) {
-            $limit = $input->getOption('limit');
-            $page = $input->getOption('page');
+            $limit = (int) $input->getOption('limit');
+            $page = (int) $input->getOption('page');
 
             $indexName = $indexManager->getIndex()->getName();
 
@@ -85,13 +86,13 @@ class PopulateCommand extends Command
 
             $progressBar->finish();
 
-            $indexManager->flushIndex();
+            $indexManager->flush();
 
             $io->newLine(3);
         }
 
         $io->success('Complete');
 
-        return 0;
+        return Command::SUCCESS;
     }
 }

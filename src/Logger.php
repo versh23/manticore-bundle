@@ -19,6 +19,7 @@ class Logger extends AbstractLogger
         $this->debug = $debug;
     }
 
+    // TODO rework
     public function logQuery(string $query, float $time): void
     {
         if ($this->debug) {

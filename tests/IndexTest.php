@@ -19,7 +19,7 @@ class IndexTest extends TestCase
         ]);
 
         $this->assertCount(1, $index->getFields());
-        $this->assertCount(1, $index->getAttributes());
+        $this->assertCount(1, $index->getOptions());
 
         $this->assertSame(SimpleEntity::class, $index->getClass());
         $this->assertSame('test_index', $index->getName());

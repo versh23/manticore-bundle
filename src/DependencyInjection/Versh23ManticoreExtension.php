@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace Versh23\ManticoreBundle\DependencyInjection;
 
 use Doctrine\ORM\Events;
+use Manticoresearch\Client;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
-use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
+use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Versh23\ManticoreBundle\IndexManager;
 
 class Versh23ManticoreExtension extends Extension
 {
+    public const INDEX_MANAGER_TAG = 'manticore.index_manager';
+
     /**
      * {@inheritdoc}
      */
@@ -23,17 +26,11 @@ class Versh23ManticoreExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $loader = new XmlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
-        $loader->load('services.xml');
+        $loader = new PhpFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+        $loader->load('services.php');
 
-        $connectionId = 'manticore.connection';
-        $connectionRef = $container->getDefinition($connectionId);
-        $connectionRef->addMethodCall('setParams', [
-            [
-                'host' => $config['host'],
-                'port' => $config['port'],
-            ],
-        ]);
+        $clientRef = $container->getDefinition(Client::class);
+        $clientRef->replaceArgument(0, $config['client']);
 
         foreach ($config['indexes'] as $name => $indexConfig) {
             $indexId = sprintf('manticore.index.%s', $name);
@@ -41,14 +38,13 @@ class Versh23ManticoreExtension extends Extension
             $indexDef->replaceArgument(0, $name);
             $indexDef->replaceArgument(1, $indexConfig['class']);
             $indexDef->replaceArgument(2, $indexConfig['fields']);
-            $indexDef->replaceArgument(3, $indexConfig['attributes']);
+            $indexDef->replaceArgument(3, $indexConfig['options']);
             $container->setDefinition($indexId, $indexDef);
 
             $indexManagerId = sprintf('manticore.index_manager.%s', $name);
             $indexManagerDef = new ChildDefinition('manticore.index_manager_prototype');
-            $indexManagerDef->replaceArgument(0, new Reference($connectionId));
             $indexManagerDef->replaceArgument(1, new Reference($indexId));
-            $indexManagerDef->addTag('manticore.index_manager');
+            $indexManagerDef->addTag(self::INDEX_MANAGER_TAG);
             $container->setDefinition($indexManagerId, $indexManagerDef);
             $container->registerAliasForArgument($indexManagerId, IndexManager::class, sprintf('%s.index_manager', $name));
 

@@ -7,21 +7,20 @@ namespace Versh23\ManticoreBundle\DependencyInjection\Compiler;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Versh23\ManticoreBundle\DependencyInjection\Versh23ManticoreExtension;
+use Versh23\ManticoreBundle\IndexManagerRegistry;
 
 class IndexManagerPass implements CompilerPassInterface
 {
-    /**
-     * {@inheritdoc}
-     */
     public function process(ContainerBuilder $container)
     {
-        if (!$container->hasDefinition('manticore.index_manager_registry')) {
+        if (!$container->hasDefinition(IndexManagerRegistry::class)) {
             return;
         }
 
-        $def = $container->getDefinition('manticore.index_manager_registry');
+        $def = $container->getDefinition(IndexManagerRegistry::class);
 
-        foreach ($container->findTaggedServiceIds('manticore.index_manager') as $serviceId => $tags) {
+        foreach ($container->findTaggedServiceIds(Versh23ManticoreExtension::INDEX_MANAGER_TAG) as $serviceId => $tags) {
             $def->addMethodCall('addIndexManager', [new Reference($serviceId)]);
         }
     }
