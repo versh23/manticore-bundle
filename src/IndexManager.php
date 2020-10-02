@@ -26,12 +26,14 @@ class IndexManager
     private $propertyAccessor = null;
     private $managerRegistry;
     private $client;
+    private $logger;
 
-    public function __construct(Client $client, Index $index, Registry $managerRegistry)
+    public function __construct(Client $client, Index $index, Registry $managerRegistry, Logger $logger)
     {
         $this->index = $index;
         $this->managerRegistry = $managerRegistry;
         $this->client = $client;
+        $this->logger = $logger;
     }
 
     public function isIndexable($object): bool
@@ -226,11 +228,11 @@ class IndexManager
         $page = max($page, 1);
         $offset = ($page - 1) * $limit;
 
-        return $index
+        return $this->collectData($index
             ->search($query)
             ->limit($limit)
             ->offset($offset)
-            ->get();
+            ->get());
     }
 
     private function hydrateItems(array $ids): array
@@ -316,5 +318,15 @@ class IndexManager
         $adapter = new QueryAdapter($queryBuilder);
 
         return new Pagerfanta($adapter);
+    }
+
+    private function collectData(ResultSet $resultSet): ResultSet
+    {
+        $time = (float) $resultSet->getResponse()->getTime();
+        $response = $resultSet->getResponse()->getResponse();
+        $request = $resultSet->getResponse()->getTransportInfo();
+        $this->logger->logQuery($request, $response, $time);
+
+        return $resultSet;
     }
 }

@@ -46,16 +46,16 @@ return static function (ContainerConfigurator $container) {
             ->arg(0, new Reference(Client::class))
             ->arg(1, null)
             ->arg(2, new Reference('doctrine'))
+            ->arg(3, new Reference(Logger::class))
 
         ->set('manticore.listener_prototype', Listener::class)->abstract()
             ->arg(0, null)
 
-    // TODO rework data collector
-//        ->set(ManticoreDataCollector::class)
-//            ->arg(0, new Reference(Logger::class))
-//            ->tag('data_collector', [
-//                'template' => '@Versh23Manticore/data_collector/template.html.twig',
-//                'id' => 'manticore.data_collector'
-//            ])
+        ->set(ManticoreDataCollector::class)
+            ->arg(0, new Reference(Logger::class))
+            ->tag('data_collector', [
+                'template' => '@Versh23Manticore/data_collector/template.html.twig',
+                'id' => 'manticore.data_collector',
+            ])
     ;
 };
