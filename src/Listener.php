@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle;
 
-use Doctrine\Persistence\Event\LifecycleEventArgs;
+use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
 
 class Listener
 {

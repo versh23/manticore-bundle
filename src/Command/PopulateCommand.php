@@ -93,6 +93,6 @@ class PopulateCommand extends Command
 
         $io->success('Complete');
 
-        return Command::SUCCESS;
+        return 0;
     }
 }
