@@ -6,7 +6,7 @@ namespace Versh23\ManticoreBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-use Versh23\ManticoreBundle\Index;
+use Versh23\ManticoreBundle\IndexConfiguration;
 
 class Configuration implements ConfigurationInterface
 {
@@ -48,11 +48,13 @@ class Configuration implements ConfigurationInterface
                                                     'type' => $field,
                                                 ];
                                             }
+
+                                            if (!isset($field['type'])) {
+                                                $field['type'] = IndexConfiguration::TYPE_TEXT;
+                                            }
+
                                             if (!isset($field['property'])) {
                                                 $field['property'] = $name;
-                                            }
-                                            if (!isset($field['type'])) {
-                                                $field['type'] = Index::TYPE_TEXT;
                                             }
                                         }
 
@@ -64,8 +66,8 @@ class Configuration implements ConfigurationInterface
                                         ->scalarNode('property')->end()
                                         ->scalarNode('type')
                                             ->validate()
-                                                ->ifTrue(function ($type) {return !in_array($type, Index::TYPES); })
-                                                ->thenInvalid('Type is not valid. Must be ['.implode(', ', Index::TYPES).']')
+                                                ->ifTrue(function ($type) {return !in_array($type, IndexConfiguration::TYPES); })
+                                                ->thenInvalid('Type is not valid. Must be ['.implode(', ', IndexConfiguration::TYPES).']')
                                             ->end()
                                         ->end()
                                         //TODO add validation

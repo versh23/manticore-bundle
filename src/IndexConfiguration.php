@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle;
 
-class Index
+class IndexConfiguration
 {
     public const TYPE_TEXT = 'text';
     public const TYPE_INTEGER = 'integer';
@@ -49,11 +49,6 @@ class Index
     public function getFields(): array
     {
         return $this->fields;
-    }
-
-    public function getFieldsName(): array
-    {
-        return array_keys($this->fields);
     }
 
     public function getClass(): string

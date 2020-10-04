@@ -7,6 +7,7 @@ namespace Versh23\ManticoreBundle;
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityRepository;
 use Manticoresearch\Client;
+use Manticoresearch\Index;
 use Manticoresearch\ResultSet;
 use Pagerfanta\Adapter\FixedAdapter;
 use Pagerfanta\Doctrine\ORM\QueryAdapter;
@@ -21,16 +22,16 @@ class IndexManager
     private const ALIAS = 'o';
     private const IDENTIFIER = 'id';
 
-    private $index;
+    private $indexConfiguration;
 
     private $propertyAccessor = null;
     private $managerRegistry;
     private $client;
     private $logger;
 
-    public function __construct(Client $client, Index $index, Registry $managerRegistry, Logger $logger)
+    public function __construct(Client $client, IndexConfiguration $indexConfiguration, Registry $managerRegistry, Logger $logger)
     {
-        $this->index = $index;
+        $this->indexConfiguration = $indexConfiguration;
         $this->managerRegistry = $managerRegistry;
         $this->client = $client;
         $this->logger = $logger;
@@ -38,47 +39,42 @@ class IndexManager
 
     public function isIndexable($object): bool
     {
-        return get_class($object) === $this->getIndex()->getClass();
-    }
-
-    public function getIndex(): Index
-    {
-        return $this->index;
+        return get_class($object) === $this->indexConfiguration->getClass();
     }
 
     public function createIndex(bool $recreate = false): void
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
 
         if ($recreate) {
             $index->drop(true);
         }
 
         $fields = [];
-        foreach ($this->index->getFields() as $fieldName => $field) {
+        foreach ($this->indexConfiguration->getFields() as $fieldName => $field) {
             $fields[$fieldName] = [
                 'type' => $field['type'],
                 'options' => $field['options'],
             ];
         }
-        $settings = $this->index->getOptions();
+        $settings = $this->indexConfiguration->getOptions();
 
         $index->create($fields, $settings);
     }
 
-    private function createManticoreIndex(): \Manticoresearch\Index
+    public function getIndex(): Index
     {
-        return $this->client->index($this->index->getName());
+        return $this->client->index($this->indexConfiguration->getName());
     }
 
     public function truncateIndex(): void
     {
-        $this->createManticoreIndex()->truncate();
+        $this->getIndex()->truncate();
     }
 
     public function flush(): void
     {
-        $this->createManticoreIndex()->flush();
+        $this->getIndex()->flush();
     }
 
     public function delete($ids): void
@@ -91,7 +87,7 @@ class IndexManager
             return;
         }
 
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         foreach ($ids as $id) {
             $index->deleteDocument($id);
         }
@@ -99,7 +95,7 @@ class IndexManager
 
     public function bulkReplace(array $objects): void
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         $documents = [];
 
         foreach ($objects as $object) {
@@ -112,7 +108,7 @@ class IndexManager
     private function createDocument($object): array
     {
         $document = [];
-        foreach ($this->index->getFields() as $name => $field) {
+        foreach ($this->indexConfiguration->getFields() as $name => $field) {
             $document[$name] = $this->getValue($object, $field['property'], $field['type']);
         }
         $document['id'] = $this->getIdentityValue($object);
@@ -122,35 +118,35 @@ class IndexManager
 
     // TODO object instead array
 
-    private function getValue($object, string $property, string $type = Index::TYPE_TEXT)
+    private function getValue($object, string $property, string $type = IndexConfiguration::TYPE_TEXT)
     {
         $propertyAccessor = $this->getPropertyAccessor();
         $value = $propertyAccessor->getValue($object, $property);
 
         switch ($type) {
-            case Index::TYPE_FLOAT:
+            case IndexConfiguration::TYPE_FLOAT:
                 return (float) $value;
-            case Index::TYPE_BOOL:
+            case IndexConfiguration::TYPE_BOOL:
                 return (bool) $value;
-            case Index::TYPE_INTEGER:
+            case IndexConfiguration::TYPE_INTEGER:
                 return (int) $value;
-            case Index::TYPE_TIMESTAMP:
+            case IndexConfiguration::TYPE_TIMESTAMP:
                 if ($value instanceof \DateTimeInterface) {
                     $value = $value->getTimestamp();
                 }
 
                 return (int) $value;
-            case Index::TYPE_JSON:
+            case IndexConfiguration::TYPE_JSON:
                 if (is_array($value)) {
                     $value = json_encode($value);
                 }
 
                 return (string) $value;
-            case Index::TYPE_MULTI:
-            case Index::TYPE_MULTI64:
+            case IndexConfiguration::TYPE_MULTI:
+            case IndexConfiguration::TYPE_MULTI64:
                 return (array) $value;
-            case Index::TYPE_TEXT:
-            case Index::TYPE_STRING:
+            case IndexConfiguration::TYPE_TEXT:
+            case IndexConfiguration::TYPE_STRING:
             default:
                 return (string) $value;
         }
@@ -173,7 +169,7 @@ class IndexManager
 
     public function replace($object): void
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         $document = $this->createDocument($object);
         $id = $document['id'];
         unset($document['id']);
@@ -183,7 +179,7 @@ class IndexManager
 
     public function insert($object): void
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         $document = $this->createDocument($object);
         $id = $document['id'];
         unset($document['id']);
@@ -193,7 +189,7 @@ class IndexManager
 
     public function bulkInsert(array $objects): void
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         $documents = [];
 
         foreach ($objects as $object) {
@@ -224,7 +220,7 @@ class IndexManager
 
     private function doFind($query = '', int $page = 1, int $limit = 10): ResultSet
     {
-        $index = $this->createManticoreIndex();
+        $index = $this->getIndex();
         $page = max($page, 1);
         $offset = ($page - 1) * $limit;
 
@@ -253,8 +249,8 @@ class IndexManager
     {
         /** @var EntityRepository $repository */
         $repository = $this->managerRegistry
-            ->getManagerForClass($this->getIndex()->getClass())
-            ->getRepository($this->getIndex()->getClass());
+            ->getManagerForClass($this->indexConfiguration->getClass())
+            ->getRepository($this->indexConfiguration->getClass());
 
         return $repository;
     }
@@ -306,7 +302,7 @@ class IndexManager
 
     public function createObjectPager(): Pagerfanta
     {
-        $class = $this->index->getClass();
+        $class = $this->indexConfiguration->getClass();
 
         /** @var EntityRepository $repository */
         $repository = $this->managerRegistry

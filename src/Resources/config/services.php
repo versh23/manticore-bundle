@@ -7,7 +7,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Manticoresearch\Client;
 use Symfony\Component\DependencyInjection\Reference;
 use Versh23\ManticoreBundle\Command\PopulateCommand;
-use Versh23\ManticoreBundle\Index;
+use Versh23\ManticoreBundle\IndexConfiguration;
 use Versh23\ManticoreBundle\IndexManager;
 use Versh23\ManticoreBundle\IndexManagerRegistry;
 use Versh23\ManticoreBundle\Listener;
@@ -36,7 +36,7 @@ return static function (ContainerConfigurator $container) {
 
         ->set(IndexManagerRegistry::class)
 
-        ->set('manticore.index_prototype', Index::class)->abstract()
+        ->set('manticore.index_prototype', IndexConfiguration::class)->abstract()
             ->arg(0, null)
             ->arg(1, null)
             ->arg(2, null)
