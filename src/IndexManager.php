@@ -302,15 +302,8 @@ class IndexManager
 
     public function createObjectPager(): Pagerfanta
     {
-        $class = $this->indexConfiguration->getClass();
-
-        /** @var EntityRepository $repository */
-        $repository = $this->managerRegistry
-            ->getManagerForClass($class)
-            ->getRepository($class);
-
+        $repository = $this->getRepository();
         $queryBuilder = $repository->createQueryBuilder(IndexManager::ALIAS);
-
         $adapter = new QueryAdapter($queryBuilder);
 
         return new Pagerfanta($adapter);
@@ -318,10 +311,12 @@ class IndexManager
 
     private function collectData(ResultSet $resultSet): ResultSet
     {
-        $time = (float) $resultSet->getResponse()->getTime();
-        $response = $resultSet->getResponse()->getResponse();
-        $request = $resultSet->getResponse()->getTransportInfo();
-        $this->logger->logQuery($request, $response, $time);
+        if ($this->logger->isDebug()) {
+            $time = (float) $resultSet->getResponse()->getTime();
+            $response = $resultSet->getResponse()->getResponse();
+            $request = $resultSet->getResponse()->getTransportInfo();
+            $this->logger->logQuery($request, $response, $time);
+        }
 
         return $resultSet;
     }

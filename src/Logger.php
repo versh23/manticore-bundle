@@ -52,4 +52,9 @@ class Logger extends AbstractLogger
     {
         return $this->queries;
     }
+
+    public function isDebug(): bool
+    {
+        return $this->debug;
+    }
 }

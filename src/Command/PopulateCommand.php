@@ -46,7 +46,6 @@ class PopulateCommand extends Command
         $indexName = $input->getArgument('index');
 
         $indexManagers = $indexName ? [$this->indexManagerRegistry->getIndexManager($indexName)] : $this->indexManagerRegistry->getAllIndexManagers();
-
         foreach ($indexManagers as $indexManager) {
             $limit = (int) $input->getOption('limit');
             $page = (int) $input->getOption('page');
