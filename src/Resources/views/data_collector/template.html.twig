@@ -68,8 +68,9 @@
             <thead>
                 <tr>
                     <th class="nowrap">#</th>
-                    <th class="nowrap">Query Time<span></span></th>
-                    <th class="full-width">Query Text</th>
+                    <th class="nowrap">Time<span></span></th>
+                    <th class="">Request</th>
+                    <th class="">Response</th>
                 </tr>
             </thead>
             <tbody>
@@ -77,7 +78,8 @@
                 <tr>
                     <td class="nowrap">{{ loop.index }}</td>
                     <td class="nowrap">{{ '%0.2f'|format(item.time) }}&nbsp;ms</td>
-                    <td>{{ item.query }}</td>
+                    <td class="">{{ item.request|json_encode(constant('JSON_PRETTY_PRINT')) }}</td>
+                    <td class="">{{ item.response|json_encode(constant('JSON_PRETTY_PRINT')) }}</td>
                 </tr>
             {% endfor %}
             </tbody>

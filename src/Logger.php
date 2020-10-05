@@ -19,18 +19,14 @@ class Logger extends AbstractLogger
         $this->debug = $debug;
     }
 
-    public function logQuery(string $query, float $time): void
+    public function logQuery(array $request, array $response, float $time): void
     {
         if ($this->debug) {
             $this->queries[] = [
-                'query' => $query,
+                'request' => $request,
+                'response' => $response,
                 'time' => $time,
             ];
-        }
-
-        if ($this->logger) {
-            $message = sprintf('%s %0.2f ms', $query, $time);
-            $this->logger->info($message);
         }
     }
 
@@ -55,5 +51,10 @@ class Logger extends AbstractLogger
     public function getQueries(): array
     {
         return $this->queries;
+    }
+
+    public function isDebug(): bool
+    {
+        return $this->debug;
     }
 }

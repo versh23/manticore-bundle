@@ -5,18 +5,18 @@ matrix:
     fast_finish: true
     include:
         # Minimum supported dependencies with the latest and oldest PHP version
-        -   php: 7.3
+        -   php: 7.4
             env: COMPOSER_FLAGS="--prefer-stable --prefer-lowest"
-        -   php: 7.1
+        -   php: 7.2
             env: COMPOSER_FLAGS="--prefer-stable --prefer-lowest"
 
         # Test the latest stable release
-        -   php: 7.1
         -   php: 7.2
         -   php: 7.3
+        -   php: 7.4
 
         # Latest commit to master
-        -   php: 7.3
+        -   php: 7.4
             env: STABILITY="dev"
     allow_failures:
         # Dev-master is allowed to fail.
@@ -34,7 +34,7 @@ env:
 
 before_install:
     - docker pull manticoresearch/manticore
-    - docker run -d -p 127.0.0.1:9306:9306 manticoresearch/manticore
+    - docker run -d -p 127.0.0.1:9308:9308 manticoresearch/manticore
     - if ! [ -z "$STABILITY" ]; then composer config minimum-stability ${STABILITY}; fi;
 
 install:

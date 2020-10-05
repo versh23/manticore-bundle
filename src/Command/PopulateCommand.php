@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Versh23\ManticoreBundle\Command;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Registry;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,7 +20,7 @@ class PopulateCommand extends Command
     private $indexManagerRegistry;
     private $managerRegistry;
 
-    public function __construct(IndexManagerRegistry $indexManagerRegistry, ManagerRegistry $managerRegistry)
+    public function __construct(IndexManagerRegistry $indexManagerRegistry, Registry $managerRegistry)
     {
         parent::__construct();
         $this->indexManagerRegistry = $indexManagerRegistry;
@@ -35,6 +35,7 @@ class PopulateCommand extends Command
 
             ->addOption('page', null, InputOption::VALUE_REQUIRED, 'Start page', 1)
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'The pager\'s page size', 100)
+            ->addOption('recreate', null, InputOption::VALUE_REQUIRED, 'Recreate index before populate', false)
         ;
     }
 
@@ -43,16 +44,20 @@ class PopulateCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $indexName = $input->getArgument('index');
+        $recreate = (bool) $input->getOption('recreate');
 
         $indexManagers = $indexName ? [$this->indexManagerRegistry->getIndexManager($indexName)] : $this->indexManagerRegistry->getAllIndexManagers();
-
         foreach ($indexManagers as $indexManager) {
-            $limit = $input->getOption('limit');
-            $page = $input->getOption('page');
+            $limit = (int) $input->getOption('limit');
+            $page = (int) $input->getOption('page');
 
             $indexName = $indexManager->getIndex()->getName();
 
             $io->block('Start populate index '.$indexName);
+
+            if ($recreate) {
+                $indexManager->createIndex(true);
+            }
 
             $indexManager->truncateIndex();
 
@@ -85,7 +90,7 @@ class PopulateCommand extends Command
 
             $progressBar->finish();
 
-            $indexManager->flushIndex();
+            $indexManager->flush();
 
             $io->newLine(3);
         }
