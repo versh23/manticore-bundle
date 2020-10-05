@@ -46,12 +46,46 @@ class PopulateCommandTest extends TestCase
         ]), new NullOutput());
     }
 
-    private function createIndexManager($indexName)
+    public function testPopulateWithPagerParams()
+    {
+        $em = $this->createMock(Registry::class);
+        $indexRegistry = new IndexManagerRegistry();
+
+        $indexManager = $this->createIndexManager('index1', 2, 10);
+        $indexRegistry->addIndexManager($indexManager);
+
+        $indexManager = $this->createIndexManager('index2', 2, 10);
+        $indexRegistry->addIndexManager($indexManager);
+
+        $command = new PopulateCommand($indexRegistry, $em);
+        $command->run(new ArrayInput([
+            '--page' => '2',
+            '--limit' => '10',
+        ]), new NullOutput());
+    }
+
+    public function testPopulateWithRecreateIndex()
+    {
+        $em = $this->createMock(Registry::class);
+        $indexRegistry = new IndexManagerRegistry();
+
+        $indexManager = $this->createIndexManager('index1', 1, 100, true);
+        $indexRegistry->addIndexManager($indexManager);
+
+        $command = new PopulateCommand($indexRegistry, $em);
+        $command->run(new ArrayInput([
+            '--recreate' => true,
+        ]), new NullOutput());
+    }
+
+    private function createIndexManager(string $indexName, int $page = 1, int $limit = 100, bool $recreate = false)
     {
         $index = $this->createMock(Index::class);
         $index->method('getName')->willReturn($indexName);
 
         $pager = $this->createMock(Pagerfanta::class);
+        $pager->expects($this->at(0))->method('setMaxPerPage')->with($limit);
+        $pager->expects($this->at(1))->method('setCurrentPage')->with($page);
         $pager->method('getNbPages')->willReturn(2);
         $pager->method('getCurrentPage')->willReturn(1);
         $pager->method('getNbResults')->willReturn(1);
@@ -63,6 +97,12 @@ class PopulateCommandTest extends TestCase
         $indexManager->expects($this->once())->method('flush');
         $indexManager->expects($this->exactly(2))->method('bulkInsert')->with([]);
         $indexManager->expects($this->once())->method('createObjectPager')->willReturn($pager);
+
+        if ($recreate) {
+            $indexManager->expects($this->once())->method('createIndex')->with(true);
+        } else {
+            $indexManager->expects($this->never())->method('createIndex');
+        }
 
         return $indexManager;
     }

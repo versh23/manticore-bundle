@@ -27,7 +27,6 @@ class PopulateCommand extends Command
         $this->managerRegistry = $managerRegistry;
     }
 
-    // TODO add recreate index option
     protected function configure()
     {
         $this
@@ -36,6 +35,7 @@ class PopulateCommand extends Command
 
             ->addOption('page', null, InputOption::VALUE_REQUIRED, 'Start page', 1)
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'The pager\'s page size', 100)
+            ->addOption('recreate', null, InputOption::VALUE_REQUIRED, 'Recreate index before populate', false)
         ;
     }
 
@@ -44,6 +44,7 @@ class PopulateCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $indexName = $input->getArgument('index');
+        $recreate = (bool) $input->getOption('recreate');
 
         $indexManagers = $indexName ? [$this->indexManagerRegistry->getIndexManager($indexName)] : $this->indexManagerRegistry->getAllIndexManagers();
         foreach ($indexManagers as $indexManager) {
@@ -53,6 +54,10 @@ class PopulateCommand extends Command
             $indexName = $indexManager->getIndex()->getName();
 
             $io->block('Start populate index '.$indexName);
+
+            if ($recreate) {
+                $indexManager->createIndex(true);
+            }
 
             $indexManager->truncateIndex();
 
